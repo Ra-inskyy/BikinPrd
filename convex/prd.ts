@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, mutation, query } from "./_generated/server";
 
@@ -226,38 +226,21 @@ export const topUpCredits = mutation({
   }),
   handler: async (ctx, { packageName, amount, creditsAdded }) => {
     const userId = await requireUser(ctx);
-    const today = getTodayDateString();
 
-    // Catat transaksi
+    // Catat transaksi sebagai FAILED/DENIED
     await ctx.db.insert("transactions", {
       userId,
       packageName,
       amount,
       creditsAdded,
-      status: "paid",
+      status: "failed",
       paymentMethod: "QRIS / E-Wallet (Simulasi)",
     });
 
-    const quota = await ctx.db
-      .query("userQuotas")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-
-    const currentBonus = quota?.bonusCredits ?? 0;
-    const newBonusCredits = currentBonus + creditsAdded;
-
-    if (quota) {
-      await ctx.db.patch(quota._id, { bonusCredits: newBonusCredits });
-    } else {
-      await ctx.db.insert("userQuotas", {
-        userId,
-        lastCreatedDate: today,
-        countToday: 0,
-        bonusCredits: newBonusCredits,
-      });
-    }
-
-    return { success: true, newBonusCredits };
+    // Fitur Top-Up ditolak — selalu denied
+    throw new ConvexError(
+      "Maaf, fitur Top-Up Kredit sedang tidak tersedia. Silakan coba lagi nanti."
+    );
   },
 });
 

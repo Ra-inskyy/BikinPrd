@@ -76,8 +76,10 @@ export function TopUpModal({
 
       toast.success(`Pembayaran Berhasil! +${pkg.credits} Kredit PRD ditambahkan.`);
       setOpen(false);
-    } catch {
-      toast.error("Gagal memproses pembayaran. Coba lagi.");
+    } catch (err: any) {
+      const message =
+        err?.data ?? err?.message ?? "Gagal memproses pembayaran. Coba lagi.";
+      toast.error(`Ditolak: ${message}`);
     } finally {
       setIsProcessing(false);
       setSelectedPkg(null);
