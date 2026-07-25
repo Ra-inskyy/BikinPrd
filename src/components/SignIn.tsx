@@ -16,11 +16,20 @@ type Step =
   | { type: "reset-code"; email: string }
   | { type: "new-password"; email: string; code: string };
 
-export function SignIn() {
+export function SignIn({
+  onStepChange,
+}: {
+  onStepChange?: (step: "signIn" | "reset") => void;
+}) {
   const { signIn } = useAuthActions();
   const [step, setStep] = useState<Step>("signIn");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleStepChange = (newStep: Step) => {
+    setStep(newStep);
+    onStepChange?.(newStep === "signIn" ? "signIn" : "reset");
+  };
 
   if (step === "signIn") {
     return (
@@ -64,7 +73,7 @@ export function SignIn() {
                   type="button"
                   variant="link"
                   className="px-0 h-auto text-xs text-muted-foreground hover:text-primary"
-                  onClick={() => setStep({ type: "forgot" })}
+                  onClick={() => handleStepChange({ type: "forgot" })}
                 >
                   Forgot password?
                 </Button>
@@ -115,7 +124,7 @@ export function SignIn() {
               const email = formData.get("email") as string;
               try {
                 await signIn("password", formData);
-                setStep({ type: "reset-code", email });
+                handleStepChange({ type: "reset-code", email });
               } catch {
                 setError("Could not send reset code. Please try again.");
               } finally {

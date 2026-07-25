@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { SignIn } from "@/components/SignIn";
@@ -33,6 +34,7 @@ function getLoginProviderState(): {
 }
 
 export function LoginPage() {
+  const [isResetStep, setIsResetStep] = useState(false);
   const {
     emailPasswordAvailable,
     viktorSignInAvailable,
@@ -51,20 +53,26 @@ export function LoginPage() {
       </div>
 
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <div className="mx-auto size-12 rounded-xl bg-primary flex items-center justify-center mb-4">
-            <span className="text-primary-foreground font-bold text-lg">M</span>
+        {!isResetStep && (
+          <div className="text-center space-y-2">
+            <div className="mx-auto size-12 rounded-xl bg-primary flex items-center justify-center mb-4">
+              <span className="text-primary-foreground font-bold text-lg">M</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+            <p className="text-muted-foreground text-sm">
+              Sign in to your account to continue
+            </p>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-muted-foreground text-sm">
-            Sign in to your account to continue
-          </p>
-        </div>
+        )}
 
-        <TestUserLoginSection />
-        <GoogleSignInButton />
-        {!invalidProviderConfiguration && <ViktorSignInSection />}
-        {emailPasswordAvailable && <SignIn />}
+        {!isResetStep && <TestUserLoginSection />}
+        {!isResetStep && <GoogleSignInButton />}
+        {!isResetStep && !invalidProviderConfiguration && (
+          <ViktorSignInSection />
+        )}
+        {emailPasswordAvailable && (
+          <SignIn onStepChange={step => setIsResetStep(step === "reset")} />
+        )}
         {signInUnavailable && (
           <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2 text-center">
             {invalidProviderConfiguration
@@ -73,7 +81,7 @@ export function LoginPage() {
           </p>
         )}
 
-        {emailPasswordAvailable && (
+        {!isResetStep && emailPasswordAvailable && (
           <p className="text-center text-sm text-muted-foreground">
             Don't have an account?{" "}
             <Button variant="link" className="p-0 h-auto font-medium" asChild>
