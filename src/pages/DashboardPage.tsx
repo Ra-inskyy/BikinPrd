@@ -30,7 +30,7 @@ const EXAMPLES = [
 function NewPrdComposer({
   quota,
 }: {
-  quota?: { totalCreated: number; maxLimit: number; remaining: number };
+  quota?: { countToday: number; maxDailyLimit: number; remainingToday: number };
 }) {
   const navigate = useNavigate();
   const createDraft = useMutation(api.prd.createDraftProject);
@@ -39,12 +39,12 @@ function NewPrdComposer({
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const totalCreated = quota?.totalCreated ?? 0;
-  const isLimitReached = totalCreated >= 5;
+  const countToday = quota?.countToday ?? 0;
+  const isLimitReached = countToday >= 1;
 
   const handleSubmit = async () => {
     if (isLimitReached) {
-      toast.error("Batas kuota 5x pembuatan PRD telah habis.");
+      toast.error("Kuota harian kamu sudah habis (1/1 PRD hari ini). Coba lagi besok!");
       return;
     }
     if (!idea.trim()) {
@@ -80,7 +80,7 @@ function NewPrdComposer({
                 : "bg-secondary border-border text-muted-foreground"
             }`}
           >
-            Kuota Pembuatan: {totalCreated}/5
+            Kuota Hari Ini: {countToday}/1 PRD
           </span>
         </div>
       </CardHeader>
@@ -89,7 +89,7 @@ function NewPrdComposer({
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive flex items-center gap-2">
             <TriangleAlert className="size-4 shrink-0" />
             <span>
-              Kamu sudah menggunakan batas maksimal 5x pembuatan PRD. Kuota tidak dapat bertambah meskipun PRD lama dihapus.
+              Kamu sudah menggunakan kuota harian (1/1 PRD hari ini). Kuota akan otomatis di-reset besok.
             </span>
           </div>
         )}
@@ -100,7 +100,7 @@ function NewPrdComposer({
           disabled={isLimitReached}
           placeholder={
             isLimitReached
-              ? "Batas kuota 5x pembuatan PRD telah habis untuk akun ini."
+              ? "Kuota harian kamu (1/1 PRD hari ini) telah habis. Silakan kembali lagi besok!"
               : "Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
           }
           className="min-h-[120px] resize-none text-base disabled:opacity-60"

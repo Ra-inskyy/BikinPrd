@@ -91,10 +91,11 @@ const schema = defineSchema({
     content: v.string(),
   }).index("by_project", ["projectId"]),
 
-  // Lacak akumulasi pembuatan PRD seumur hidup (max 5x buat per akun, tidak kembali jika dihapus)
+  // Lacak kuota harian pembuatan PRD (1 PRD per hari per user)
   userQuotas: defineTable({
     userId: v.id("users"),
-    totalCreated: v.number(),
+    lastCreatedDate: v.string(), // format "YYYY-MM-DD"
+    countToday: v.number(),
   }).index("by_user", ["userId"]),
 });
 

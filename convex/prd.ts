@@ -106,25 +106,36 @@ export const getProject = query({
   },
 });
 
+function getTodayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export const getUserQuota = query({
   args: {},
   returns: v.object({
-    totalCreated: v.number(),
-    maxLimit: v.number(),
-    remaining: v.number(),
+    countToday: v.number(),
+    maxDailyLimit: v.number(),
+    remainingToday: v.number(),
+    lastCreatedDate: v.optional(v.string()),
   }),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
-    if (!userId) return { totalCreated: 0, maxLimit: 5, remaining: 5 };
+    const today = getTodayDateString();
+    if (!userId) {
+      return { countToday: 0, maxDailyLimit: 1, remainingToday: 1 };
+    }
     const quota = await ctx.db
       .query("userQuotas")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
-    const totalCreated = quota ? quota.totalCreated : 0;
+
+    const isToday = quota?.lastCreatedDate === today;
+    const countToday = isToday ? quota.countToday : 0;
     return {
-      totalCreated,
-      maxLimit: 5,
-      remaining: Math.max(0, 5 - totalCreated),
+      countToday,
+      maxDailyLimit: 1,
+      remainingToday: Math.max(0, 1 - countToday),
+      lastCreatedDate: quota?.lastCreatedDate,
     };
   },
 });
@@ -137,24 +148,34 @@ export const createDraftProject = mutation({
     const trimmed = idea.trim();
     if (!trimmed) throw new Error("Ide tidak boleh kosong");
 
-    // Lacak kuota pembuatan seumur hidup (max 5x total)
+    const today = getTodayDateString();
+
+    // Lacak kuota harian (max 1 PRD per hari)
     const quota = await ctx.db
       .query("userQuotas")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    const currentCount = quota ? quota.totalCreated : 0;
+    const isToday = quota?.lastCreatedDate === today;
+    const countToday = isToday ? quota.countToday : 0;
 
-    if (currentCount >= 5) {
+    if (countToday >= 1) {
       throw new Error(
-        "Batas maksimum 5x pembuatan PRD untuk akun ini telah habis (5/5). Kuota tidak akan bertambah meskipun PRD di history dihapus.",
+        "Kuota harian kamu telah habis (1/1 PRD hari ini). Kuota akan otomatis di-reset besok!",
       );
     }
 
     if (quota) {
-      await ctx.db.patch(quota._id, { totalCreated: currentCount + 1 });
+      await ctx.db.patch(quota._id, {
+        lastCreatedDate: today,
+        countToday: 1,
+      });
     } else {
-      await ctx.db.insert("userQuotas", { userId, totalCreated: 1 });
+      await ctx.db.insert("userQuotas", {
+        userId,
+        lastCreatedDate: today,
+        countToday: 1,
+      });
     }
 
     const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;
