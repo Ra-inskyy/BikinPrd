@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { SignIn } from "@/components/SignIn";
 import {
   TestUserLoginSection,
@@ -61,6 +62,7 @@ export function LoginPage() {
         </div>
 
         <TestUserLoginSection />
+        <GoogleSignInButton />
         {!invalidProviderConfiguration && <ViktorSignInSection />}
         {emailPasswordAvailable && <SignIn />}
         {signInUnavailable && (

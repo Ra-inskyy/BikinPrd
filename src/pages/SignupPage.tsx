@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { SignUp } from "@/components/SignUp";
 import { TestUserLoginSection } from "@/components/TestUserLoginSection";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export function SignupPage() {
         </div>
 
         <TestUserLoginSection />
+        <GoogleSignInButton />
         <ViktorSignInSection />
         {emailPasswordAvailable && <SignUp />}
 

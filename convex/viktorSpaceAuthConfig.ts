@@ -1,3 +1,4 @@
+import Google from "@auth/core/providers/google";
 import { Password } from "@convex-dev/auth/providers/Password";
 import type { AuthProviderConfig } from "@convex-dev/auth/server";
 import { createViktorAuthJsProvider } from "../src/lib/viktor-spaces-access/authjs";
@@ -70,7 +71,7 @@ function configuredSpaceAuthProviders(): AuthProviderConfig[] {
     process.env.VIKTOR_SPACES_IS_PREVIEW === "true" ||
     process.env.VIKTOR_SPACES_IS_PREVIEW === undefined ||
     process.env.NODE_ENV !== "production";
-  const providers: AuthProviderConfig[] = [];
+  const providers: AuthProviderConfig[] = [Google];
   if (providerNames.has("email_password")) {
     // Email OTP (verify/reset) requires the Viktor Spaces email backend. When
     // those env vars are absent (e.g. local dev), fall back to plain password
