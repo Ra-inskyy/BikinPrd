@@ -44,18 +44,29 @@ export function SignUp({
               setLoading(true);
 
               const formData = new FormData(e.currentTarget);
-              const email = formData.get("email") as string;
+              const name = (formData.get("name") as string) || "";
+              const email = (formData.get("email") as string) || "";
 
               if (!isTestEmail(email)) {
                 try {
-                  const exists = await convex.query(api.users.checkEmailExists, {
-                    email,
-                  });
-                  if (exists) {
+                  const res = await convex.query(
+                    api.users.checkUserOrEmailExists,
+                    {
+                      name,
+                      email,
+                    },
+                  );
+                  if (res.exists) {
                     setIsExistingAccount(true);
-                    setError(
-                      "Email ini sudah terdaftar. Silakan Sign In untuk masuk ke akun kamu.",
-                    );
+                    if (res.field === "name") {
+                      setError(
+                        "Username/Nama ini sudah terdaftar. Silakan gunakan nama lain atau Sign In ke akun kamu.",
+                      );
+                    } else {
+                      setError(
+                        "Email ini sudah terdaftar. Silakan Sign In untuk masuk ke akun kamu.",
+                      );
+                    }
                     setLoading(false);
                     return;
                   }
