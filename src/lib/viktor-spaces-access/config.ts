@@ -1,6 +1,5 @@
 import type { ViktorSpaceAccessMode } from "./types";
 
-const VALID_ACCESS_MODES = new Set(["public", "authenticated"]);
 const DEFAULT_AUTH_PROVIDER_NAMES = ["email_password", "viktor"] as const;
 type AuthProviderName = (typeof DEFAULT_AUTH_PROVIDER_NAMES)[number];
 
@@ -28,10 +27,8 @@ export function getViktorSpaceAccessMode(): ViktorSpaceAccessMode {
   return "authenticated";
 }
 
-export function getViktorSpacesAuthEnabled(
-  env: ViktorSpacesEnv = getDefaultViktorSpacesEnv(),
-): boolean {
-  return getViktorSpaceAccessMode(env) === "authenticated";
+export function getViktorSpacesAuthEnabled(): boolean {
+  return getViktorSpaceAccessMode() === "authenticated";
 }
 
 function getViktorSpacesAuthProviderNames(
@@ -99,7 +96,7 @@ export function getViktorSignInAvailable(
   env: ViktorSpacesEnv = getDefaultViktorSpacesEnv(),
 ): boolean {
   return (
-    getViktorSpacesAuthEnabled(env) &&
+    getViktorSpacesAuthEnabled() &&
     getViktorSpacesAuthProviderNames(env).has("viktor") &&
     Boolean(getViktorSpacesSpaceId(env)) &&
     Boolean(getViktorAuthBaseUrl(env))
@@ -110,7 +107,7 @@ export function getEmailPasswordSignInAvailable(
   env: ViktorSpacesEnv = getDefaultViktorSpacesEnv(),
 ): boolean {
   return (
-    getViktorSpacesAuthEnabled(env) &&
+    getViktorSpacesAuthEnabled() &&
     getViktorSpacesAuthProviderNames(env).has("email_password")
   );
 }
