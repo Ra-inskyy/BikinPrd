@@ -292,7 +292,7 @@ export function DashboardPage() {
           </div>
         ) : (
           <div className="grid gap-3">
-            {projects.map((p) => (
+            {projects.map((p: any) => (
               <button
                 type="button"
                 key={p._id}
