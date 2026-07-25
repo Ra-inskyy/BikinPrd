@@ -74,7 +74,7 @@ function configuredSpaceAuthProviders(): AuthProviderConfig[] {
     const resendProvider = resendApiKey
       ? Resend({
           apiKey: resendApiKey,
-          from: "BikinPRD <onboarding@resend.dev>",
+          from: "BikinPRD <noreply@rainsky.web.id>",
         })
       : undefined;
 
