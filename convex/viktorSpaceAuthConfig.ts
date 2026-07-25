@@ -1,5 +1,5 @@
 import Google from "@auth/core/providers/google";
-import Resend from "@auth/core/providers/resend";
+import { Email } from "@convex-dev/auth/providers/Email";
 import { Password } from "@convex-dev/auth/providers/Password";
 import type { AuthProviderConfig } from "@convex-dev/auth/server";
 import { createViktorAuthJsProvider } from "../src/lib/viktor-spaces-access/authjs";
@@ -10,6 +10,53 @@ declare const process: { env: Record<string, string | undefined> };
 
 const DEFAULT_AUTH_PROVIDER_NAMES = ["email_password", "viktor"] as const;
 type AuthProviderName = (typeof DEFAULT_AUTH_PROVIDER_NAMES)[number];
+
+const ResendOTP = Email({
+  id: "resend-otp",
+  apiKey: process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY,
+  maxAge: 60 * 10, // 10 menit
+  async generateVerificationToken() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  },
+  async sendVerificationRequest({
+    identifier: email,
+    token,
+  }: {
+    identifier: string;
+    token: string;
+  }) {
+    const apiKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
+    if (!apiKey) throw new Error("AUTH_RESEND_KEY is missing");
+
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "BikinPRD <noreply@rainsky.web.id>",
+        to: [email],
+        subject: `Kode OTP BikinPRD: ${token}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+            <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0;">Kode Verifikasi OTP</h2>
+            <p style="color: #475569; font-size: 14px; line-height: 1.5;">Gunakan kode OTP 6-digit berikut untuk mengonfirmasi pendaftaran akun BikinPRD kamu:</p>
+            <div style="background-color: #f1f5f9; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+              <span style="font-family: monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #2563eb;">${token}</span>
+            </div>
+            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Kode OTP ini berlaku selama 10 menit. Jaga kerahasiaan kode ini dan jangan bagikan kepada siapa pun.</p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Failed to send email OTP via Resend: ${errText}`);
+    }
+  },
+});
 
 function configuredAuthProviderNames(): Set<AuthProviderName> {
   const configured =
@@ -71,12 +118,7 @@ function configuredSpaceAuthProviders(): AuthProviderConfig[] {
   if (providerNames.has("email_password")) {
     const resendApiKey =
       process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
-    const resendProvider = resendApiKey
-      ? Resend({
-          apiKey: resendApiKey,
-          from: "BikinPRD <noreply@rainsky.web.id>",
-        })
-      : undefined;
+    const resendProvider = resendApiKey ? ResendOTP : undefined;
 
     providers.push(
       Password({
