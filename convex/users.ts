@@ -111,3 +111,67 @@ export const deleteAccount = mutation({
     return { success: true };
   },
 });
+
+export const clearAllTestData = mutation({
+  args: {},
+  handler: async ctx => {
+    // 1. Delete all projects, features, chatMessages, userQuotas, transactions
+    const projects = await ctx.db.query("projects").collect();
+    for (const p of projects) {
+      await ctx.db.delete(p._id);
+    }
+
+    const features = await ctx.db.query("features").collect();
+    for (const f of features) {
+      await ctx.db.delete(f._id);
+    }
+
+    const chatMessages = await ctx.db.query("chatMessages").collect();
+    for (const m of chatMessages) {
+      await ctx.db.delete(m._id);
+    }
+
+    const userQuotas = await ctx.db.query("userQuotas").collect();
+    for (const q of userQuotas) {
+      await ctx.db.delete(q._id);
+    }
+
+    const transactions = await ctx.db.query("transactions").collect();
+    for (const t of transactions) {
+      await ctx.db.delete(t._id);
+    }
+
+    // 2. Delete all users, authAccounts, authSessions, authVerificationCodes
+    const users = await ctx.db.query("users").collect();
+    for (const u of users) {
+      await ctx.db.delete(u._id);
+    }
+
+    const accounts = await ctx.db.query("authAccounts").collect();
+    for (const a of accounts) {
+      await ctx.db.delete(a._id);
+    }
+
+    const sessions = await ctx.db.query("authSessions").collect();
+    for (const s of sessions) {
+      await ctx.db.delete(s._id);
+    }
+
+    const codes = await ctx.db.query("authVerificationCodes").collect();
+    for (const c of codes) {
+      await ctx.db.delete(c._id);
+    }
+
+    return {
+      success: true,
+      deletedCount: {
+        projects: projects.length,
+        features: features.length,
+        chatMessages: chatMessages.length,
+        users: users.length,
+        accounts: accounts.length,
+        sessions: sessions.length,
+      },
+    };
+  },
+});
