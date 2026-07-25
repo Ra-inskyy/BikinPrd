@@ -106,6 +106,29 @@ export const getProject = query({
   },
 });
 
+export const getUserQuota = query({
+  args: {},
+  returns: v.object({
+    totalCreated: v.number(),
+    maxLimit: v.number(),
+    remaining: v.number(),
+  }),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { totalCreated: 0, maxLimit: 5, remaining: 5 };
+    const quota = await ctx.db
+      .query("userQuotas")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    const totalCreated = quota ? quota.totalCreated : 0;
+    return {
+      totalCreated,
+      maxLimit: 5,
+      remaining: Math.max(0, 5 - totalCreated),
+    };
+  },
+});
+
 export const createDraftProject = mutation({
   args: { idea: v.string(), context: v.optional(v.string()) },
   returns: v.id("projects"),
@@ -114,16 +137,24 @@ export const createDraftProject = mutation({
     const trimmed = idea.trim();
     if (!trimmed) throw new Error("Ide tidak boleh kosong");
 
-    // Batasi 5 PRD per user
-    const existingProjects = await ctx.db
-      .query("projects")
+    // Lacak kuota pembuatan seumur hidup (max 5x total)
+    const quota = await ctx.db
+      .query("userQuotas")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .first();
 
-    if (existingProjects.length >= 5) {
+    const currentCount = quota ? quota.totalCreated : 0;
+
+    if (currentCount >= 5) {
       throw new Error(
-        "Batas kuota 5 PRD telah tercapai (5/5). Silakan hapus PRD lama untuk membuat PRD baru.",
+        "Batas maksimum 5x pembuatan PRD untuk akun ini telah habis (5/5). Kuota tidak akan bertambah meskipun PRD di history dihapus.",
       );
+    }
+
+    if (quota) {
+      await ctx.db.patch(quota._id, { totalCreated: currentCount + 1 });
+    } else {
+      await ctx.db.insert("userQuotas", { userId, totalCreated: 1 });
     }
 
     const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;

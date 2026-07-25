@@ -27,7 +27,11 @@ const EXAMPLES = [
   "Tools SaaS untuk menjadwalkan postingan Instagram otomatis",
 ];
 
-function NewPrdComposer({ projectCount = 0 }: { projectCount?: number }) {
+function NewPrdComposer({
+  quota,
+}: {
+  quota?: { totalCreated: number; maxLimit: number; remaining: number };
+}) {
   const navigate = useNavigate();
   const createDraft = useMutation(api.prd.createDraftProject);
   const [idea, setIdea] = useState("");
@@ -35,11 +39,12 @@ function NewPrdComposer({ projectCount = 0 }: { projectCount?: number }) {
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const isLimitReached = projectCount >= 5;
+  const totalCreated = quota?.totalCreated ?? 0;
+  const isLimitReached = totalCreated >= 5;
 
   const handleSubmit = async () => {
     if (isLimitReached) {
-      toast.error("Batas kuota 5 PRD tercapai. Hapus PRD lama untuk membuat baru.");
+      toast.error("Batas kuota 5x pembuatan PRD telah habis.");
       return;
     }
     if (!idea.trim()) {
@@ -75,7 +80,7 @@ function NewPrdComposer({ projectCount = 0 }: { projectCount?: number }) {
                 : "bg-secondary border-border text-muted-foreground"
             }`}
           >
-            Kuota: {projectCount}/5 PRD
+            Kuota Pembuatan: {totalCreated}/5
           </span>
         </div>
       </CardHeader>
@@ -84,7 +89,7 @@ function NewPrdComposer({ projectCount = 0 }: { projectCount?: number }) {
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive flex items-center gap-2">
             <TriangleAlert className="size-4 shrink-0" />
             <span>
-              Kamu sudah mencapai batas maksimal 5 PRD. Hapus PRD lama untuk membuat PRD baru.
+              Kamu sudah menggunakan batas maksimal 5x pembuatan PRD. Kuota tidak dapat bertambah meskipun PRD lama dihapus.
             </span>
           </div>
         )}
@@ -95,7 +100,7 @@ function NewPrdComposer({ projectCount = 0 }: { projectCount?: number }) {
           disabled={isLimitReached}
           placeholder={
             isLimitReached
-              ? "Batas 5 PRD tercapai. Hapus PRD lama terlebih dahulu untuk membuat PRD baru."
+              ? "Batas kuota 5x pembuatan PRD telah habis untuk akun ini."
               : "Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
           }
           className="min-h-[120px] resize-none text-base disabled:opacity-60"
@@ -224,6 +229,7 @@ function StatusBadge({ status }: { status: string }) {
 export function DashboardPage() {
   const user = useQuery(api.auth.currentUser);
   const projects = useQuery(api.prd.listProjects);
+  const userQuota = useQuery(api.prd.getUserQuota);
   const deleteProject = useMutation(api.prd.deleteProject);
   const navigate = useNavigate();
 
@@ -238,14 +244,14 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <NewPrdComposer projectCount={projects?.length ?? 0} />
+      <NewPrdComposer quota={userQuota} />
 
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">PRD kamu</h2>
           {projects !== undefined && (
             <span className="font-mono text-xs text-muted-foreground">
-              {projects.length}/5 PRD
+              {projects.length} PRD tersimpan
             </span>
           )}
         </div>
