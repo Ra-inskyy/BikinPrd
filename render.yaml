@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: bikin-prd-custom-api
+    env: static
+    buildCommand: bun run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
