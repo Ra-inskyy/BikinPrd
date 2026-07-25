@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { SignUp } from "@/components/SignUp";
@@ -8,6 +9,7 @@ import { getEmailPasswordSignInAvailable } from "@/lib/viktor-spaces-access/conf
 
 export function SignupPage() {
   const emailPasswordAvailable = getEmailPasswordSignInAvailable();
+  const [isOtpStep, setIsOtpStep] = useState(false);
 
   return (
     <div className="flex-1 flex items-center justify-center p-4 relative">
@@ -17,24 +19,29 @@ export function SignupPage() {
       </div>
 
       <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-2">
-          <div className="mx-auto size-12 rounded-xl bg-primary flex items-center justify-center mb-4">
-            <span className="text-primary-foreground font-bold text-lg">M</span>
+        {!isOtpStep && (
+          <div className="text-center space-y-2">
+            <div className="mx-auto size-12 rounded-xl bg-primary flex items-center justify-center mb-4">
+              <span className="text-primary-foreground font-bold text-lg">M</span>
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Create an account
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Get started with your free account
+            </p>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Create an account
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Get started with your free account
-          </p>
-        </div>
+        )}
 
-        <TestUserLoginSection />
-        <GoogleSignInButton />
-        <ViktorSignInSection />
-        {emailPasswordAvailable && <SignUp />}
+        {!isOtpStep && <TestUserLoginSection />}
+        {!isOtpStep && <GoogleSignInButton />}
+        {!isOtpStep && <ViktorSignInSection />}
 
         {emailPasswordAvailable && (
+          <SignUp onStepChange={step => setIsOtpStep(step === "otp")} />
+        )}
+
+        {!isOtpStep && emailPasswordAvailable && (
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Button variant="link" className="p-0 h-auto font-medium" asChild>

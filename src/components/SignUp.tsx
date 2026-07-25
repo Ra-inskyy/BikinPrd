@@ -12,11 +12,20 @@ function isTestEmail(email: string): boolean {
 
 type Step = "signUp" | { email: string };
 
-export function SignUp() {
+export function SignUp({
+  onStepChange,
+}: {
+  onStepChange?: (step: "signUp" | "otp") => void;
+}) {
   const { signIn } = useAuthActions();
   const [step, setStep] = useState<Step>("signUp");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleStepChange = (newStep: Step) => {
+    setStep(newStep);
+    onStepChange?.(typeof newStep === "string" ? newStep : "otp");
+  };
 
   if (step === "signUp") {
     return (
@@ -34,7 +43,7 @@ export function SignUp() {
               try {
                 await signIn(provider, formData);
                 if (!isTestEmail(email)) {
-                  setStep({ email });
+                  handleStepChange({ email });
                 }
               } catch {
                 setError("Could not create account. Please try again.");
@@ -156,7 +165,7 @@ export function SignUp() {
             type="button"
             variant="ghost"
             className="w-full"
-            onClick={() => setStep("signUp")}
+            onClick={() => handleStepChange("signUp")}
           >
             <ArrowLeft className="size-4" />
             Back to sign up
