@@ -1,6 +1,8 @@
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvex } from "convex/react";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
+import { api } from "../../convex/_generated/api";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
@@ -22,6 +24,7 @@ export function SignIn({
   onStepChange?: (step: "signIn" | "reset") => void;
 }) {
   const { signIn } = useAuthActions();
+  const convex = useConvex();
   const [step, setStep] = useState<Step>("signIn");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,12 +45,27 @@ export function SignIn({
               setLoading(true);
 
               const formData = new FormData(e.currentTarget);
-              const email = formData.get("email") as string;
-              const provider = isTestEmail(email) ? "test" : "password";
+              const rawIdentifier = (formData.get("email") as string) || "";
+              let resolvedEmail = rawIdentifier;
+
+              if (rawIdentifier && !isTestEmail(rawIdentifier)) {
+                try {
+                  resolvedEmail = await convex.query(
+                    api.users.resolveEmailFromUsernameOrEmail,
+                    { identifier: rawIdentifier },
+                  );
+                } catch {
+                  // Fallback to raw value
+                }
+              }
+
+              formData.set("email", resolvedEmail);
+
+              const provider = isTestEmail(resolvedEmail) ? "test" : "password";
               try {
                 await signIn(provider, formData);
               } catch {
-                setError("Invalid email or password");
+                setError("Invalid username/email or password");
               } finally {
                 setLoading(false);
               }
@@ -55,13 +73,13 @@ export function SignIn({
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Username or Email</Label>
               <Input
                 id="email"
                 name="email"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
+                type="text"
+                placeholder="username atau email@example.com"
+                autoComplete="username"
                 className="h-11"
                 required
               />
@@ -121,10 +139,25 @@ export function SignIn({
               setLoading(true);
 
               const formData = new FormData(e.currentTarget);
-              const email = formData.get("email") as string;
+              const rawIdentifier = (formData.get("email") as string) || "";
+              let resolvedEmail = rawIdentifier;
+
+              if (rawIdentifier && !isTestEmail(rawIdentifier)) {
+                try {
+                  resolvedEmail = await convex.query(
+                    api.users.resolveEmailFromUsernameOrEmail,
+                    { identifier: rawIdentifier },
+                  );
+                } catch {
+                  // Fallback to raw value
+                }
+              }
+
+              formData.set("email", resolvedEmail);
+
               try {
                 await signIn("password", formData);
-                handleStepChange({ type: "reset-code", email });
+                handleStepChange({ type: "reset-code", email: resolvedEmail });
               } catch {
                 setError("Could not send reset code. Please try again.");
               } finally {
@@ -134,14 +167,14 @@ export function SignIn({
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Username or Email</Label>
               <Input
                 id="email"
                 name="email"
-                type="email"
-                placeholder="you@example.com"
+                type="text"
+                placeholder="username atau email@example.com"
                 defaultValue={step.email}
-                autoComplete="email"
+                autoComplete="username"
                 className="h-11"
                 required
               />

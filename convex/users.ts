@@ -45,6 +45,43 @@ export const checkUserOrEmailExists = query({
   },
 });
 
+export const resolveEmailFromUsernameOrEmail = query({
+  args: { identifier: v.string() },
+  handler: async (ctx, args) => {
+    const trimmed = args.identifier.trim();
+    if (!trimmed) return "";
+
+    if (trimmed.includes("@")) {
+      return trimmed.toLowerCase();
+    }
+
+    const normalizedName = trimmed.toLowerCase();
+
+    // Check by_username index
+    const userByUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", q => q.eq("username", normalizedName))
+      .first();
+
+    if (userByUsername?.email) {
+      return userByUsername.email.toLowerCase();
+    }
+
+    // Scan users table for matching name or username
+    const allUsers = await ctx.db.query("users").collect();
+    for (const u of allUsers) {
+      if (
+        (u.username && u.username.trim().toLowerCase() === normalizedName) ||
+        (u.name && u.name.trim().toLowerCase() === normalizedName)
+      ) {
+        if (u.email) return u.email.toLowerCase();
+      }
+    }
+
+    return trimmed;
+  },
+});
+
 export const deleteAccount = mutation({
   args: {},
   handler: async ctx => {
