@@ -120,10 +120,17 @@ async function aiStructuredOutput(
         return { result: null, error: brief };
       }
 
-      const json = (await response.json()) as {
-        choices?: { message?: { content?: string } }[];
-      };
-      const content = json.choices?.[0]?.message?.content;
+      const rawText = await response.text();
+      let cleanText = rawText.trim();
+      if (cleanText.includes("data: [DONE]")) {
+        cleanText = cleanText.split("data: [DONE]")[0].trim();
+      }
+
+      const json = safeParseJson(cleanText) as
+        | { choices?: { message?: { content?: string } }[] }
+        | undefined;
+
+      const content = json?.choices?.[0]?.message?.content;
       if (!content) {
         return { result: null, error: "Respons AI kosong" };
       }
