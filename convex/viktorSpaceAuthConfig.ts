@@ -1,12 +1,9 @@
 import Google from "@auth/core/providers/google";
+import Resend from "@auth/core/providers/resend";
 import { Password } from "@convex-dev/auth/providers/Password";
 import type { AuthProviderConfig } from "@convex-dev/auth/server";
 import { createViktorAuthJsProvider } from "../src/lib/viktor-spaces-access/authjs";
 import { TestCredentials } from "./testAuth";
-import {
-  ViktorSpacesEmail,
-  ViktorSpacesPasswordReset,
-} from "./ViktorSpacesEmail";
 import { configuredProductAuthEnabled } from "./viktorSpaceAuthEnv";
 
 declare const process: { env: Record<string, string | undefined> };
@@ -47,21 +44,20 @@ function configuredAuthProviderNames(): Set<AuthProviderName> {
 }
 
 function viktorWorkspaceSignInProviders(): AuthProviderConfig[] {
-  const resourceId = process.env.VIKTOR_AUTH_RESOURCE_ID || "";
-  const viktorAuthBaseUrl = process.env.VIKTOR_AUTH_BASE_URL || "";
-  if (!resourceId || !viktorAuthBaseUrl) {
-    // Deployments without a Viktor control plane (local dev) still get
-    // email + password auth; "Sign in with Viktor" is simply absent.
-    return [];
-  }
+  const resourceId =
+    process.env.VIKTOR_AUTH_RESOURCE_ID ||
+    process.env.VITE_VIKTOR_AUTH_RESOURCE_ID;
+  const baseUrl =
+    process.env.VIKTOR_AUTH_BASE_URL ||
+    process.env.VITE_VIKTOR_SPACES_API_URL;
+  if (!resourceId || !baseUrl) return [];
+
   return [
-    // Hand-rolled Auth.js-style OAuth config; structurally compatible with
-    // the provider shape Convex Auth consumes.
     createViktorAuthJsProvider({
-      clientId: process.env.VIKTOR_AUTH_CLIENT_ID || `space-${resourceId}`,
       resourceId,
-      viktorAuthBaseUrl,
-    }) as unknown as AuthProviderConfig,
+      viktorAuthBaseUrl: baseUrl,
+      clientId: process.env.VITE_VIKTOR_AUTH_CLIENT_ID || "",
+    }),
   ];
 }
 
@@ -73,20 +69,20 @@ function configuredSpaceAuthProviders(): AuthProviderConfig[] {
     process.env.NODE_ENV !== "production";
   const providers: AuthProviderConfig[] = [Google];
   if (providerNames.has("email_password")) {
-    // Email OTP (verify/reset) requires the Viktor Spaces email backend. When
-    // those env vars are absent (e.g. local dev), fall back to plain password
-    // auth so sign-up/sign-in still works without an OTP round-trip.
-    const emailConfigured =
-      !!process.env.VIKTOR_SPACES_API_URL &&
-      !!process.env.VIKTOR_SPACES_PROJECT_NAME &&
-      !!process.env.VIKTOR_SPACES_PROJECT_SECRET;
+    const resendApiKey =
+      process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
+    const resendProvider = resendApiKey
+      ? Resend({
+          apiKey: resendApiKey,
+          from: "BikinPRD <onboarding@resend.dev>",
+        })
+      : undefined;
+
     providers.push(
-      emailConfigured
-        ? Password({
-            verify: ViktorSpacesEmail,
-            reset: ViktorSpacesPasswordReset,
-          })
-        : Password(),
+      Password({
+        verify: resendProvider,
+        reset: resendProvider,
+      }),
     );
   }
   if (providerNames.has("viktor")) {
