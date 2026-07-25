@@ -7,7 +7,10 @@ const schema = defineSchema({
   users: defineTable({
     ...authTables.users.validator.fields,
     username: v.optional(v.string()),
-  }).index("by_username", ["username"]),
+  })
+    .index("email", ["email"])
+    .index("phone", ["phone"])
+    .index("by_username", ["username"]),
 
   // Proyek PRD: satu ide produk -> PRD lengkap
   projects: defineTable({
