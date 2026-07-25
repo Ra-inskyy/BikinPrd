@@ -58,9 +58,25 @@ npm install
 ```
 
 ### 2. Konfigurasi Environment Variables
+
+#### A. Frontend (`.env.local`)
 Buat file `.env.local` di root proyek:
 ```env
-VITE_CONVEX_URL=https://accomplished-guanaco-713.convex.cloud
+# URL Deployment Convex Cloud Anda
+VITE_CONVEX_URL=https://<your-convex-deployment>.convex.cloud
+```
+
+#### B. Backend Convex (Set via CLI / Dashboard)
+Atur environment variables di Convex Cloud Deployment Anda:
+```bash
+# Set URL domain utama aplikasi untuk redirect autentikasi
+npx convex env set SITE_URL "https://rainsky.web.id"
+
+# Set API Key Resend untuk pengiriman email OTP
+npx convex env set AUTH_RESEND_KEY "re_your_resend_api_key"
+
+# Set API Key Provider AI (Opsional jika memakai provider kustom)
+npx convex env set AI_API_KEY "your-ai-api-key"
 ```
 
 ### 3. Jalankan Dev Server
