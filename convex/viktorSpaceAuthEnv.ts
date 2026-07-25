@@ -10,13 +10,5 @@ declare const process: { env: Record<string, string | undefined> };
 const TRANSIENT_LEGACY_ACCESS_MODES = new Set(["space_auth", "viktor_auth"]);
 
 export function configuredProductAuthEnabled(): boolean {
-  const configured =
-    process.env.VIKTOR_SPACES_ACCESS_MODE ||
-    process.env.VITE_VIKTOR_SPACES_ACCESS_MODE ||
-    "authenticated";
-  if (configured === "authenticated") return true;
-  if (configured === "public") return false;
-  if (configured && TRANSIENT_LEGACY_ACCESS_MODES.has(configured)) return true;
-
   return true;
 }
