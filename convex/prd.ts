@@ -113,6 +113,19 @@ export const createDraftProject = mutation({
     const userId = await requireUser(ctx);
     const trimmed = idea.trim();
     if (!trimmed) throw new Error("Ide tidak boleh kosong");
+
+    // Batasi 5 PRD per user
+    const existingProjects = await ctx.db
+      .query("projects")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    if (existingProjects.length >= 5) {
+      throw new Error(
+        "Batas kuota 5 PRD telah tercapai (5/5). Silakan hapus PRD lama untuk membuat PRD baru.",
+      );
+    }
+
     const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;
     return await ctx.db.insert("projects", {
       userId,

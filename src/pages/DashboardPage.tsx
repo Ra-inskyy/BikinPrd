@@ -27,7 +27,7 @@ const EXAMPLES = [
   "Tools SaaS untuk menjadwalkan postingan Instagram otomatis",
 ];
 
-function NewPrdComposer() {
+function NewPrdComposer({ projectCount = 0 }: { projectCount?: number }) {
   const navigate = useNavigate();
   const createDraft = useMutation(api.prd.createDraftProject);
   const [idea, setIdea] = useState("");
@@ -35,7 +35,13 @@ function NewPrdComposer() {
   const [showContext, setShowContext] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const isLimitReached = projectCount >= 5;
+
   const handleSubmit = async () => {
+    if (isLimitReached) {
+      toast.error("Batas kuota 5 PRD tercapai. Hapus PRD lama untuk membuat baru.");
+      return;
+    }
     if (!idea.trim()) {
       toast.error("Tulis dulu ide produkmu");
       return;
@@ -47,8 +53,9 @@ function NewPrdComposer() {
         context: context.trim() || undefined,
       });
       navigate(`/project/${projectId}`, { state: { autostart: true } });
-    } catch (e) {
-      toast.error("Gagal membuat PRD. Coba lagi.");
+    } catch (e: any) {
+      const msg = e?.message || "Gagal membuat PRD. Coba lagi.";
+      toast.error(msg);
       setSubmitting(false);
     }
   };
@@ -56,17 +63,42 @@ function NewPrdComposer() {
   return (
     <Card className="border-primary/20 bg-card">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 font-heading text-lg">
-          <Sparkles className="size-5 text-primary" />
-          Ide produk baru
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 font-heading text-lg">
+            <Sparkles className="size-5 text-primary" />
+            Ide produk baru
+          </CardTitle>
+          <span
+            className={`font-mono text-xs px-2.5 py-1 rounded-full border ${
+              isLimitReached
+                ? "bg-destructive/10 border-destructive/30 text-destructive font-semibold"
+                : "bg-secondary border-border text-muted-foreground"
+            }`}
+          >
+            Kuota: {projectCount}/5 PRD
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isLimitReached && (
+          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive flex items-center gap-2">
+            <TriangleAlert className="size-4 shrink-0" />
+            <span>
+              Kamu sudah mencapai batas maksimal 5 PRD. Hapus PRD lama untuk membuat PRD baru.
+            </span>
+          </div>
+        )}
+
         <Textarea
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
-          placeholder="Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
-          className="min-h-[120px] resize-none text-base"
+          disabled={isLimitReached}
+          placeholder={
+            isLimitReached
+              ? "Batas 5 PRD tercapai. Hapus PRD lama terlebih dahulu untuk membuat PRD baru."
+              : "Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
+          }
+          className="min-h-[120px] resize-none text-base disabled:opacity-60"
           onKeyDown={(e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleSubmit();
           }}
@@ -76,14 +108,16 @@ function NewPrdComposer() {
           <Textarea
             value={context}
             onChange={(e) => setContext(e.target.value)}
+            disabled={isLimitReached}
             placeholder="Konteks tambahan (opsional): target user spesifik, batasan teknis, referensi produk, dll."
-            className="min-h-[80px] resize-none text-sm"
+            className="min-h-[80px] resize-none text-sm disabled:opacity-60"
           />
         ) : (
           <button
             type="button"
+            disabled={isLimitReached}
             onClick={() => setShowContext(true)}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
             + Tambah konteks (opsional)
           </button>
@@ -94,8 +128,9 @@ function NewPrdComposer() {
             <button
               key={ex}
               type="button"
+              disabled={isLimitReached}
               onClick={() => setIdea(ex)}
-              className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-40"
             >
               {ex.length > 42 ? `${ex.slice(0, 42)}…` : ex}
             </button>
@@ -108,7 +143,7 @@ function NewPrdComposer() {
           </span>
           <Button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || isLimitReached}
             className="ml-auto h-11 px-6 font-semibold"
           >
             {submitting ? (
@@ -203,14 +238,14 @@ export function DashboardPage() {
         </p>
       </div>
 
-      <NewPrdComposer />
+      <NewPrdComposer projectCount={projects?.length ?? 0} />
 
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-heading text-lg font-semibold">PRD kamu</h2>
-          {projects && projects.length > 0 && (
+          {projects !== undefined && (
             <span className="font-mono text-xs text-muted-foreground">
-              {projects.length} PRD
+              {projects.length}/5 PRD
             </span>
           )}
         </div>
