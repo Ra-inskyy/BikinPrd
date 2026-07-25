@@ -100,8 +100,12 @@ export function SignUp({
                 if (!isTestEmail(email)) {
                   handleStepChange({ email });
                 }
-              } catch {
-                setError("Could not create account. Please try again.");
+              } catch (err: unknown) {
+                const errMsg =
+                  err && typeof err === "object" && "message" in err
+                    ? String((err as { message: unknown }).message)
+                    : "Could not create account. Please try again.";
+                setError(errMsg);
               } finally {
                 setLoading(false);
               }

@@ -28,7 +28,19 @@ const ResendOTP = Email({
     const apiKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
     if (!apiKey) throw new Error("AUTH_RESEND_KEY is missing");
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+        <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0;">Kode Verifikasi OTP</h2>
+        <p style="color: #475569; font-size: 14px; line-height: 1.5;">Gunakan kode OTP 6-digit berikut untuk mengonfirmasi pendaftaran akun BikinPRD kamu:</p>
+        <div style="background-color: #f1f5f9; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
+          <span style="font-family: monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #2563eb;">${token}</span>
+        </div>
+        <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Kode OTP ini berlaku selama 10 menit. Jaga kerahasiaan kode ini dan jangan bagikan kepada siapa pun.</p>
+      </div>
+    `;
+
+    // Try custom domain first
+    let res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -38,18 +50,26 @@ const ResendOTP = Email({
         from: "BikinPRD <noreply@rainsky.web.id>",
         to: [email],
         subject: `Kode OTP BikinPRD: ${token}`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-            <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0;">Kode Verifikasi OTP</h2>
-            <p style="color: #475569; font-size: 14px; line-height: 1.5;">Gunakan kode OTP 6-digit berikut untuk mengonfirmasi pendaftaran akun BikinPRD kamu:</p>
-            <div style="background-color: #f1f5f9; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">
-              <span style="font-family: monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #2563eb;">${token}</span>
-            </div>
-            <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">Kode OTP ini berlaku selama 10 menit. Jaga kerahasiaan kode ini dan jangan bagikan kepada siapa pun.</p>
-          </div>
-        `,
+        html: emailHtml,
       }),
     });
+
+    // Fallback to onboarding@resend.dev if custom domain is pending verification in Resend
+    if (!res.ok) {
+      res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "BikinPRD <onboarding@resend.dev>",
+          to: [email],
+          subject: `Kode OTP BikinPRD: ${token}`,
+          html: emailHtml,
+        }),
+      });
+    }
 
     if (!res.ok) {
       const errText = await res.text();
