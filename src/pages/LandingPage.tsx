@@ -61,7 +61,7 @@ function Hero({ isAuthenticated }: { isAuthenticated: boolean }) {
 
         <div className="mt-10 flex flex-col items-center gap-3">
           <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            Didukung model terbaik
+            Pakai model YTTA
           </span>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {MODELS.map((m) => (
