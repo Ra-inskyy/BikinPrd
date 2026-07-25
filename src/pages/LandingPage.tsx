@@ -9,7 +9,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const MODELS = ["GPT-5.5", "Claude Opus 4.7", "Gemini 3", "DeepSeek V4"];
@@ -125,6 +125,10 @@ const FEATURES = [
 
 export function LandingPage() {
   const { isAuthenticated } = useConvexAuth();
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="flex-1">

@@ -12,7 +12,7 @@ export function GoogleSignInButton() {
     setError("");
     setLoading(true);
     try {
-      await signIn("google");
+      await signIn("google", { redirectTo: "/dashboard" });
     } catch {
       setError("Failed to initialize Google sign-in. Check your Google Client ID configuration.");
     } finally {
