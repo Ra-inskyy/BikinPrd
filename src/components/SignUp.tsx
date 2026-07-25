@@ -1,6 +1,9 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { ArrowLeft, Loader2, Mail } from "lucide-react";
+import { useConvex } from "convex/react";
+import { AlertTriangle, ArrowLeft, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { api } from "../../convex/_generated/api";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
@@ -18,8 +21,10 @@ export function SignUp({
   onStepChange?: (step: "signUp" | "otp") => void;
 }) {
   const { signIn } = useAuthActions();
+  const convex = useConvex();
   const [step, setStep] = useState<Step>("signUp");
   const [error, setError] = useState("");
+  const [isExistingAccount, setIsExistingAccount] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleStepChange = (newStep: Step) => {
@@ -35,10 +40,30 @@ export function SignUp({
             onSubmit={async e => {
               e.preventDefault();
               setError("");
+              setIsExistingAccount(false);
               setLoading(true);
 
               const formData = new FormData(e.currentTarget);
               const email = formData.get("email") as string;
+
+              if (!isTestEmail(email)) {
+                try {
+                  const exists = await convex.query(api.users.checkEmailExists, {
+                    email,
+                  });
+                  if (exists) {
+                    setIsExistingAccount(true);
+                    setError(
+                      "Email ini sudah terdaftar. Silakan Sign In untuk masuk ke akun kamu.",
+                    );
+                    setLoading(false);
+                    return;
+                  }
+                } catch {
+                  // If query fails, fall through to default flow
+                }
+              }
+
               const provider = isTestEmail(email) ? "test" : "password";
               try {
                 await signIn(provider, formData);
@@ -95,9 +120,21 @@ export function SignUp({
             </div>
             <input name="flow" value="signUp" type="hidden" />
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">
-                {error}
-              </p>
+              <div className="space-y-2">
+                <div className="text-sm text-destructive bg-destructive/10 rounded-lg p-3 flex items-start gap-2">
+                  <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+                {isExistingAccount && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-primary/40 text-primary font-medium"
+                    asChild
+                  >
+                    <Link to="/login">Ke Halaman Sign In / Login</Link>
+                  </Button>
+                )}
+              </div>
             )}
             <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading && <Loader2 className="size-4 animate-spin" />}
