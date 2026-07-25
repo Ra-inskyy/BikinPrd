@@ -8,6 +8,10 @@ export const checkUserOrEmailExists = query({
     const normalizedEmail = args.email.trim().toLowerCase();
     const normalizedName = args.name.trim().toLowerCase();
 
+    if (!normalizedEmail && !normalizedName) {
+      return { exists: false, field: null };
+    }
+
     // Check authAccounts table for providerAccountId matching normalized email
     if (normalizedEmail) {
       const account = await ctx.db
@@ -21,15 +25,23 @@ export const checkUserOrEmailExists = query({
     // Check users table for email or name field
     const allUsers = await ctx.db.query("users").collect();
     for (const u of allUsers) {
-      if (u.email && u.email.trim().toLowerCase() === normalizedEmail) {
+      if (
+        normalizedEmail &&
+        u.email &&
+        u.email.trim().toLowerCase() === normalizedEmail
+      ) {
         return { exists: true, field: "email" };
       }
-      if (u.name && u.name.trim().toLowerCase() === normalizedName) {
+      if (
+        normalizedName &&
+        u.name &&
+        u.name.trim().toLowerCase() === normalizedName
+      ) {
         return { exists: true, field: "name" };
       }
     }
 
-    return { exists: false };
+    return { exists: false, field: null };
   },
 });
 

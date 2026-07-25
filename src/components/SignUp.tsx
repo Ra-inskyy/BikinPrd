@@ -1,5 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvex } from "convex/react";
+import { useConvex, useQuery } from "convex/react";
 import { AlertTriangle, ArrowLeft, Loader2, Mail } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -27,12 +27,31 @@ export function SignUp({
   const [isExistingAccount, setIsExistingAccount] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [usernameInput, setUsernameInput] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+
+  // Live query check for duplicate Username or Email
+  const liveCheck = useQuery(api.users.checkUserOrEmailExists, {
+    name: usernameInput,
+    email: emailInput,
+  });
+
   const handleStepChange = (newStep: Step) => {
     setStep(newStep);
     onStepChange?.(typeof newStep === "string" ? newStep : "otp");
   };
 
   if (step === "signUp") {
+    const isUsernameDuplicate =
+      usernameInput.trim().length > 0 &&
+      liveCheck?.exists &&
+      liveCheck?.field === "name";
+
+    const isEmailDuplicate =
+      emailInput.trim().length > 0 &&
+      liveCheck?.exists &&
+      liveCheck?.field === "email";
+
     return (
       <Card variant="elevated">
         <CardContent className="pt-6">
@@ -60,7 +79,7 @@ export function SignUp({
                     setIsExistingAccount(true);
                     if (res.field === "name") {
                       setError(
-                        "Username/Nama ini sudah terdaftar. Silakan gunakan nama lain atau Sign In ke akun kamu.",
+                        "Username ini sudah terdaftar. Silakan gunakan username lain atau Sign In ke akun kamu.",
                       );
                     } else {
                       setError(
@@ -90,16 +109,24 @@ export function SignUp({
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Username</Label>
               <Input
                 id="name"
                 name="name"
                 type="text"
-                placeholder="Your name"
-                autoComplete="name"
-                className="h-11"
+                placeholder="pilih_username"
+                autoComplete="username"
+                value={usernameInput}
+                onChange={e => setUsernameInput(e.target.value)}
+                className={`h-11 ${isUsernameDuplicate ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 required
               />
+              {isUsernameDuplicate && (
+                <p className="text-xs text-destructive font-medium flex items-center gap-1.5 mt-1">
+                  <AlertTriangle className="size-3.5 shrink-0" />
+                  Username ini sudah terdaftar. Gunakan username lain.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -109,9 +136,17 @@ export function SignUp({
                 type="email"
                 placeholder="you@example.com"
                 autoComplete="email"
-                className="h-11"
+                value={emailInput}
+                onChange={e => setEmailInput(e.target.value)}
+                className={`h-11 ${isEmailDuplicate ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 required
               />
+              {isEmailDuplicate && (
+                <p className="text-xs text-destructive font-medium flex items-center gap-1.5 mt-1">
+                  <AlertTriangle className="size-3.5 shrink-0" />
+                  Email ini sudah terdaftar. Silakan Sign In ke akun kamu.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
