@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { TopUpModal } from "@/components/TopUpModal";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -30,7 +31,13 @@ const EXAMPLES = [
 function NewPrdComposer({
   quota,
 }: {
-  quota?: { countToday: number; maxDailyLimit: number; remainingToday: number };
+  quota?: {
+    countToday: number;
+    maxDailyLimit: number;
+    remainingToday: number;
+    bonusCredits: number;
+    totalAvailable: number;
+  };
 }) {
   const navigate = useNavigate();
   const createDraft = useMutation(api.prd.createDraftProject);
@@ -40,11 +47,13 @@ function NewPrdComposer({
   const [submitting, setSubmitting] = useState(false);
 
   const countToday = quota?.countToday ?? 0;
-  const isLimitReached = countToday >= 1;
+  const bonusCredits = quota?.bonusCredits ?? 0;
+  const totalAvailable = quota?.totalAvailable ?? 1;
+  const isLimitReached = totalAvailable === 0;
 
   const handleSubmit = async () => {
     if (isLimitReached) {
-      toast.error("Kuota harian kamu sudah habis (1/1 PRD hari ini). Coba lagi besok!");
+      toast.error("Kuota harian kamu sudah habis & belum ada Kredit Bonus. Silakan Top-Up kredit!");
       return;
     }
     if (!idea.trim()) {
@@ -68,29 +77,40 @@ function NewPrdComposer({
   return (
     <Card className="border-primary/20 bg-card">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 font-heading text-lg">
             <Sparkles className="size-5 text-primary" />
             Ide produk baru
           </CardTitle>
-          <span
-            className={`font-mono text-xs px-2.5 py-1 rounded-full border ${
-              isLimitReached
-                ? "bg-destructive/10 border-destructive/30 text-destructive font-semibold"
-                : "bg-secondary border-border text-muted-foreground"
-            }`}
-          >
-            Kuota Hari Ini: {countToday}/1 PRD
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`font-mono text-xs px-2.5 py-1 rounded-full border ${
+                isLimitReached
+                  ? "bg-destructive/10 border-destructive/30 text-destructive font-semibold"
+                  : "bg-secondary border-border text-muted-foreground"
+              }`}
+            >
+              Hari ini: {countToday}/1
+              {bonusCredits > 0 && (
+                <span className="ml-1 text-primary font-bold">
+                  (+{bonusCredits} Bonus)
+                </span>
+              )}
+            </span>
+            <TopUpModal triggerText="Beli Kredit" size="sm" />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {isLimitReached && (
-          <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive flex items-center gap-2">
-            <TriangleAlert className="size-4 shrink-0" />
-            <span>
-              Kamu sudah menggunakan kuota harian (1/1 PRD hari ini). Kuota akan otomatis di-reset besok.
-            </span>
+          <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-xs text-destructive flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <TriangleAlert className="size-5 shrink-0 text-destructive" />
+              <span>
+                Kuota harian gratis kamu (1/1 PRD) sudah habis hari ini. Ingin buat PRD baru sekarang?
+              </span>
+            </div>
+            <TopUpModal triggerText="Top-Up Kredit (+5 PRD)" variant="default" />
           </div>
         )}
 
@@ -100,7 +120,7 @@ function NewPrdComposer({
           disabled={isLimitReached}
           placeholder={
             isLimitReached
-              ? "Kuota harian kamu (1/1 PRD hari ini) telah habis. Silakan kembali lagi besok!"
+              ? "Kuota harian (1/1 PRD hari ini) telah habis. Klik 'Top-Up Kredit' di atas untuk menambah kredit instan!"
               : "Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
           }
           className="min-h-[120px] resize-none text-base disabled:opacity-60"

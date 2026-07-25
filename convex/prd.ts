@@ -116,13 +116,21 @@ export const getUserQuota = query({
     countToday: v.number(),
     maxDailyLimit: v.number(),
     remainingToday: v.number(),
+    bonusCredits: v.number(),
+    totalAvailable: v.number(),
     lastCreatedDate: v.optional(v.string()),
   }),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     const today = getTodayDateString();
     if (!userId) {
-      return { countToday: 0, maxDailyLimit: 1, remainingToday: 1 };
+      return {
+        countToday: 0,
+        maxDailyLimit: 1,
+        remainingToday: 1,
+        bonusCredits: 0,
+        totalAvailable: 1,
+      };
     }
     const quota = await ctx.db
       .query("userQuotas")
@@ -131,10 +139,15 @@ export const getUserQuota = query({
 
     const isToday = quota?.lastCreatedDate === today;
     const countToday = isToday ? quota.countToday : 0;
+    const remainingToday = Math.max(0, 1 - countToday);
+    const bonusCredits = quota?.bonusCredits ?? 0;
+
     return {
       countToday,
       maxDailyLimit: 1,
-      remainingToday: Math.max(0, 1 - countToday),
+      remainingToday,
+      bonusCredits,
+      totalAvailable: remainingToday + bonusCredits,
       lastCreatedDate: quota?.lastCreatedDate,
     };
   },
@@ -150,7 +163,6 @@ export const createDraftProject = mutation({
 
     const today = getTodayDateString();
 
-    // Lacak kuota harian (max 1 PRD per hari)
     const quota = await ctx.db
       .query("userQuotas")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -158,24 +170,37 @@ export const createDraftProject = mutation({
 
     const isToday = quota?.lastCreatedDate === today;
     const countToday = isToday ? quota.countToday : 0;
+    const bonusCredits = quota?.bonusCredits ?? 0;
 
-    if (countToday >= 1) {
-      throw new Error(
-        "Kuota harian kamu telah habis (1/1 PRD hari ini). Kuota akan otomatis di-reset besok!",
-      );
+    // Prioritas 1: Pakai Kuota Harian (1/1)
+    if (countToday < 1) {
+      if (quota) {
+        await ctx.db.patch(quota._id, {
+          lastCreatedDate: today,
+          countToday: 1,
+        });
+      } else {
+        await ctx.db.insert("userQuotas", {
+          userId,
+          lastCreatedDate: today,
+          countToday: 1,
+          bonusCredits: 0,
+        });
+      }
     }
-
-    if (quota) {
-      await ctx.db.patch(quota._id, {
-        lastCreatedDate: today,
-        countToday: 1,
-      });
-    } else {
-      await ctx.db.insert("userQuotas", {
-        userId,
-        lastCreatedDate: today,
-        countToday: 1,
-      });
+    // Prioritas 2: Kuota Harian habis -> Pakai Kredit Bonus
+    else if (bonusCredits > 0) {
+      if (quota) {
+        await ctx.db.patch(quota._id, {
+          bonusCredits: bonusCredits - 1,
+        });
+      }
+    }
+    // Tidak ada kuota maupun kredit bonus
+    else {
+      throw new Error(
+        "Kuota harian kamu sudah habis (1/1 PRD hari ini) dan kamu belum memiliki Kredit Bonus. Silakan Top-Up kredit untuk membuat PRD baru!",
+      );
     }
 
     const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;
@@ -186,6 +211,90 @@ export const createDraftProject = mutation({
       context: context?.trim() || undefined,
       status: "choosing",
     });
+  },
+});
+
+export const topUpCredits = mutation({
+  args: {
+    packageName: v.string(),
+    amount: v.number(),
+    creditsAdded: v.number(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    newBonusCredits: v.number(),
+  }),
+  handler: async (ctx, { packageName, amount, creditsAdded }) => {
+    const userId = await requireUser(ctx);
+    const today = getTodayDateString();
+
+    // Catat transaksi
+    await ctx.db.insert("transactions", {
+      userId,
+      packageName,
+      amount,
+      creditsAdded,
+      status: "paid",
+      paymentMethod: "QRIS / E-Wallet (Simulasi)",
+    });
+
+    const quota = await ctx.db
+      .query("userQuotas")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    const currentBonus = quota?.bonusCredits ?? 0;
+    const newBonusCredits = currentBonus + creditsAdded;
+
+    if (quota) {
+      await ctx.db.patch(quota._id, { bonusCredits: newBonusCredits });
+    } else {
+      await ctx.db.insert("userQuotas", {
+        userId,
+        lastCreatedDate: today,
+        countToday: 0,
+        bonusCredits: newBonusCredits,
+      });
+    }
+
+    return { success: true, newBonusCredits };
+  },
+});
+
+export const listTransactions = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("transactions"),
+      _creationTime: v.number(),
+      packageName: v.string(),
+      amount: v.number(),
+      creditsAdded: v.number(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("paid"),
+        v.literal("failed"),
+      ),
+      paymentMethod: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const txs = await ctx.db
+      .query("transactions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+    return txs.map((t) => ({
+      _id: t._id,
+      _creationTime: t._creationTime,
+      packageName: t.packageName,
+      amount: t.amount,
+      creditsAdded: t.creditsAdded,
+      status: t.status,
+      paymentMethod: t.paymentMethod,
+    }));
   },
 });
 

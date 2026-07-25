@@ -91,11 +91,22 @@ const schema = defineSchema({
     content: v.string(),
   }).index("by_project", ["projectId"]),
 
-  // Lacak kuota harian pembuatan PRD (1 PRD per hari per user)
+  // Lacak kuota harian pembuatan PRD (1 PRD per hari per user) & kredit bonus
   userQuotas: defineTable({
     userId: v.id("users"),
     lastCreatedDate: v.string(), // format "YYYY-MM-DD"
     countToday: v.number(),
+    bonusCredits: v.optional(v.number()), // kredit tambahan dari top-up
+  }).index("by_user", ["userId"]),
+
+  // Riwayat transaksi top-up kredit
+  transactions: defineTable({
+    userId: v.id("users"),
+    amount: v.number(), // harga dalam Rupiah
+    creditsAdded: v.number(), // jumlah kredit didapat
+    packageName: v.string(), // "Paket Hemat 5 PRD", dst.
+    status: v.union(v.literal("pending"), v.literal("paid"), v.literal("failed")),
+    paymentMethod: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 });
 
