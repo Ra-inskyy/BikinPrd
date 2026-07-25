@@ -12,8 +12,6 @@ import {
 import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
-const MODELS = ["GPT-5.5", "Claude Opus 4.7", "Gemini 3", "DeepSeek V4"];
-
 function Hero({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <section className="relative overflow-hidden border-b border-border">
@@ -60,19 +58,9 @@ function Hero({ isAuthenticated }: { isAuthenticated: boolean }) {
         </div>
 
         <div className="mt-10 flex flex-col items-center gap-3">
-          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            Pakai model YTTA
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground rounded-full border border-border bg-card/40 px-4 py-1.5 backdrop-blur">
+            Pakai model YTTA 🤫
           </span>
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {MODELS.map((m) => (
-              <span
-                key={m}
-                className="rounded-md border border-border bg-card/50 px-3 py-1 font-mono text-xs text-muted-foreground"
-              >
-                {m}
-              </span>
-            ))}
-          </div>
         </div>
       </div>
     </section>
