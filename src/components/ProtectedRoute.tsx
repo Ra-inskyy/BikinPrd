@@ -1,5 +1,6 @@
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Navigate, Outlet } from "react-router-dom";
+import { api } from "../../convex/_generated/api";
 import {
   Sidebar,
   SidebarContent,
@@ -64,13 +65,14 @@ function AppSkeleton() {
 }
 
 export function ProtectedRoute() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
+  const user = useQuery(api.auth.currentUser);
 
-  if (isLoading) {
+  if (isAuthLoading || (isAuthenticated && user === undefined)) {
     return <AppSkeleton />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || user === null) {
     return <Navigate to="/login" replace />;
   }
 

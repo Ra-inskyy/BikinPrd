@@ -1,5 +1,8 @@
-import { useConvexAuth } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth, useQuery } from "convex/react";
+import { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
+import { api } from "../../convex/_generated/api";
 import {
   Card,
   CardContent,
@@ -42,13 +45,21 @@ function AuthFormSkeleton() {
 }
 
 export function PublicOnlyRoute() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
+  const user = useQuery(api.auth.currentUser);
+  const { signOut } = useAuthActions();
 
-  if (isLoading) {
+  useEffect(() => {
+    if (isAuthenticated && user === null) {
+      void signOut();
+    }
+  }, [isAuthenticated, user, signOut]);
+
+  if (isAuthLoading || (isAuthenticated && user === undefined)) {
     return <AuthFormSkeleton />;
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user !== null) {
     return <Navigate to="/dashboard" replace />;
   }
 
