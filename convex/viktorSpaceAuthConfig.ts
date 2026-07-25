@@ -124,6 +124,15 @@ function configuredSpaceAuthProviders(): AuthProviderConfig[] {
       Password({
         verify: resendProvider,
         reset: resendProvider,
+        profile(params) {
+          const nameVal =
+            (params.name as string) || (params.username as string) || "";
+          return {
+            email: params.email as string,
+            name: nameVal,
+            username: nameVal,
+          };
+        },
       }),
     );
   }

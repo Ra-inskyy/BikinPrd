@@ -4,6 +4,10 @@ import { v } from "convex/values";
 
 const schema = defineSchema({
   ...authTables,
+  users: defineTable({
+    ...authTables.users.validator.fields,
+    username: v.optional(v.string()),
+  }).index("by_username", ["username"]),
 
   // Proyek PRD: satu ide produk -> PRD lengkap
   projects: defineTable({
