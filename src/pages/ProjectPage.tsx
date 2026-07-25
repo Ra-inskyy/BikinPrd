@@ -72,7 +72,7 @@ function slugify(s: string) {
 // biome-ignore lint/suspicious/noExplicitAny: convex docs are dynamic here
 function prdToMarkdown(project: any, features: any[]): string {
   const lines: string[] = [];
-  lines.push(`# PRD — ${project.title}`, "");
+  lines.push(`# PRD: ${project.title}`, "");
   if (project.summary) lines.push("## Ringkasan", project.summary, "");
   if (project.problem) lines.push("## Masalah", project.problem, "");
   if (project.targetUsers)
@@ -631,7 +631,7 @@ function QuestionsForm({
         </div>
         <p className="mt-1.5 text-sm text-muted-foreground">
           Sebelum menyusun PRD, pilih jawaban yang paling sesuai atau isi
-          sendiri lewat opsi "Lainnya". Boleh dikosongkan — AI akan pakai
+          sendiri lewat opsi "Lainnya". Boleh dikosongkan, AI akan pakai
           asumsi terbaik untuk yang tidak dijawab.
         </p>
       </div>

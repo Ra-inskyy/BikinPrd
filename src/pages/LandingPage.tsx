@@ -37,7 +37,7 @@ function Hero({ isAuthenticated }: { isAuthenticated: boolean }) {
         </h1>
 
         <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          Deskripsikan idemu, dan biarkan AI menyusun PRD lengkap — ringkasan,
+          Deskripsikan idemu, dan biarkan AI menyusun PRD lengkap mulai dari ringkasan,
           spec fitur, sampai task teknis yang tinggal di-copy ke Cursor, Claude
           Code, atau agent favoritmu.
         </p>
@@ -104,7 +104,7 @@ const FEATURES = [
   {
     icon: FileText,
     title: "PRD terstruktur",
-    body: "Ringkasan, masalah, target user, goals, non-goals, metrik, dan rekomendasi tech stack — semuanya rapi.",
+    body: "Ringkasan, masalah, target user, goals, non-goals, metrik, dan rekomendasi tech stack, semuanya tersusun rapi.",
   },
   {
     icon: GitBranch,
