@@ -72,6 +72,24 @@ const schema = defineSchema({
     ),
     error: v.optional(v.string()),
     model: v.optional(v.string()),
+    planType: v.optional(v.union(v.literal("standard"), v.literal("simple_script"))),
+    simplePlan: v.optional(
+      v.object({
+        title: v.string(),
+        summary: v.string(),
+        techStack: v.array(v.string()),
+        steps: v.array(
+          v.object({
+            stepNumber: v.number(),
+            title: v.string(),
+            description: v.string(),
+            codeSnippet: v.optional(v.string()),
+          }),
+        ),
+        fullScriptSkeleton: v.optional(v.string()),
+        aiPrompt: v.string(),
+      }),
+    ),
   }).index("by_user", ["userId"]),
 
   // Fitur milik sebuah proyek, tiap fitur punya spec markdown + task

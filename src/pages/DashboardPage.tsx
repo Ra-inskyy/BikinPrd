@@ -44,6 +44,7 @@ function NewPrdComposer({
   const [idea, setIdea] = useState("");
   const [context, setContext] = useState("");
   const [showContext, setShowContext] = useState(false);
+  const [planType, setPlanType] = useState<"standard" | "simple_script">("standard");
   const [submitting, setSubmitting] = useState(false);
 
   const countToday = quota?.countToday ?? 0;
@@ -65,6 +66,7 @@ function NewPrdComposer({
       const projectId = await createDraft({
         idea: idea.trim(),
         context: context.trim() || undefined,
+        planType,
       });
       navigate(`/project/${projectId}`, { state: { autostart: true } });
     } catch (e: any) {
@@ -114,6 +116,43 @@ function NewPrdComposer({
           </div>
         )}
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            disabled={isLimitReached}
+            onClick={() => setPlanType("standard")}
+            className={`flex flex-col text-left p-3 rounded-xl border transition-all ${
+              planType === "standard"
+                ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                : "border-border bg-card text-muted-foreground hover:border-primary/30"
+            }`}
+          >
+            <span className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
+              📘 PRD Standar & Detail
+            </span>
+            <span className="text-xs text-muted-foreground mt-0.5">
+              Untuk Web App & Aplikasi Kompleks (Fitur, Spec, Architecture & Tasks)
+            </span>
+          </button>
+          <button
+            type="button"
+            disabled={isLimitReached}
+            onClick={() => setPlanType("simple_script")}
+            className={`flex flex-col text-left p-3 rounded-xl border transition-all ${
+              planType === "simple_script"
+                ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                : "border-border bg-card text-muted-foreground hover:border-primary/30"
+            }`}
+          >
+            <span className="font-semibold text-sm flex items-center gap-1.5 text-primary font-mono">
+              ⚡ Plan Script / Project Sederhana
+            </span>
+            <span className="text-xs text-muted-foreground mt-0.5">
+              Untuk Script, Otomasi & Small Project (Ringkas, Skeleton Code & Prompt AI)
+            </span>
+          </button>
+        </div>
+
         <Textarea
           value={idea}
           onChange={(e) => setIdea(e.target.value)}
@@ -121,7 +160,9 @@ function NewPrdComposer({
           placeholder={
             isLimitReached
               ? "Kuota harian (1/1 PRD hari ini) telah habis. Klik 'Top-Up Kredit' di atas untuk menambah kredit instan!"
-              : "Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
+              : planType === "simple_script"
+                ? "Ceritakan script/project sederhana kamu. Contoh: Script Python untuk download video YouTube & ekstrak audio mp3 secara otomatis…"
+                : "Ceritakan produk yang mau kamu bangun. Contoh: Aplikasi untuk membantu freelancer mengelola invoice dan mengingatkan klien yang belum bayar…"
           }
           className="min-h-[120px] resize-none text-base disabled:opacity-60"
           onKeyDown={(e) => {

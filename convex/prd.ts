@@ -154,9 +154,13 @@ export const getUserQuota = query({
 });
 
 export const createDraftProject = mutation({
-  args: { idea: v.string(), context: v.optional(v.string()) },
+  args: {
+    idea: v.string(),
+    context: v.optional(v.string()),
+    planType: v.optional(v.union(v.literal("standard"), v.literal("simple_script"))),
+  },
   returns: v.id("projects"),
-  handler: async (ctx, { idea, context }) => {
+  handler: async (ctx, { idea, context, planType }) => {
     const userId = await requireUser(ctx);
     const trimmed = idea.trim();
     if (!trimmed) throw new Error("Ide tidak boleh kosong");
@@ -209,6 +213,7 @@ export const createDraftProject = mutation({
       title,
       idea: trimmed,
       context: context?.trim() || undefined,
+      planType: planType || "standard",
       status: "choosing",
     });
   },
@@ -538,6 +543,41 @@ export const applyQuestions = internalMutation({
     await ctx.db.patch(projectId, {
       questions,
       status: "questioning",
+      error: undefined,
+    });
+    return null;
+  },
+});
+
+export const applySimplePlan = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+    simplePlan: v.object({
+      title: v.string(),
+      summary: v.string(),
+      techStack: v.array(v.string()),
+      steps: v.array(
+        v.object({
+          stepNumber: v.number(),
+          title: v.string(),
+          description: v.string(),
+          codeSnippet: v.optional(v.string()),
+        }),
+      ),
+      fullScriptSkeleton: v.optional(v.string()),
+      aiPrompt: v.string(),
+    }),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, simplePlan }) => {
+    const project = await ctx.db.get(projectId);
+    if (!project) return null;
+    await ctx.db.patch(projectId, {
+      title: simplePlan.title || project.title,
+      summary: simplePlan.summary || project.summary,
+      techStack: simplePlan.techStack || project.techStack,
+      simplePlan,
+      status: "ready",
       error: undefined,
     });
     return null;

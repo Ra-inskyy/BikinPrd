@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Copy,
   Download,
+  FileCode,
   FileText,
   GitBranch,
   LayoutGrid,
@@ -21,9 +22,11 @@ import {
   Sparkles,
   StickyNote,
   Target,
+  Terminal,
   Trash2,
   TriangleAlert,
   Wand2,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -119,6 +122,39 @@ function featureToMarkdown(f: any, idx: number): string {
   if (f.tasks?.length) {
     lines.push("### Tasks");
     for (const t of f.tasks) lines.push(`- [ ] ${t}`);
+  }
+  return lines.join("\n");
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: convex doc
+function simplePlanToMarkdown(project: any): string {
+  const plan = project.simplePlan;
+  if (!plan) return "";
+  const lines: string[] = [];
+  lines.push(`# Plan Project / Script Sederhana: ${plan.title || project.title}`, "");
+  if (plan.summary) lines.push("## Ringkasan", plan.summary, "");
+  if (plan.techStack?.length) {
+    lines.push("## Tech Stack / Tools");
+    for (const t of plan.techStack) lines.push(`- ${t}`);
+    lines.push("");
+  }
+  if (plan.steps?.length) {
+    lines.push("## Alur Langkah Eksekusi", "");
+    for (const s of plan.steps) {
+      lines.push(`### Langkah ${s.stepNumber || 1}: ${s.title}`);
+      lines.push(s.description, "");
+      if (s.codeSnippet) {
+        lines.push("```python", s.codeSnippet, "```", "");
+      }
+    }
+  }
+  if (plan.fullScriptSkeleton) {
+    lines.push("## Script Skeleton / Template Code", "");
+    lines.push("```python", plan.fullScriptSkeleton, "```", "");
+  }
+  if (plan.aiPrompt) {
+    lines.push("## Prompt untuk AI Coding Agent", "");
+    lines.push("```text", plan.aiPrompt, "```", "");
   }
   return lines.join("\n");
 }
@@ -347,6 +383,208 @@ function FeaturesTab({ features }: { features: any[] }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------- tab plan sederhana ----------
+
+function SimplePlanTab({
+  project,
+  onGenerateSimplePlan,
+  generating,
+}: {
+  // biome-ignore lint/suspicious/noExplicitAny: convex doc
+  project: any;
+  onGenerateSimplePlan: () => Promise<void>;
+  generating: boolean;
+}) {
+  const plan = project.simplePlan;
+
+  if (!plan) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border p-12 text-center">
+        <div className="mb-4 inline-flex size-12 items-center justify-center rounded-2xl bg-primary/10">
+          <Zap className="size-6 text-primary" />
+        </div>
+        <h3 className="font-heading text-lg font-semibold">
+          Belum ada Plan Project / Script Sederhana
+        </h3>
+        <p className="mt-1.5 max-w-md text-sm text-muted-foreground">
+          Buat plan ringkas 1 halaman yang berfokus pada alur eksekusi, skeleton script code, dan prompt AI tanpa dokumen PRD bertele-tele.
+        </p>
+        <Button
+          onClick={onGenerateSimplePlan}
+          disabled={generating}
+          className="mt-5 h-10 px-5 font-medium"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Menyusun Plan…
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-4" /> Generate Plan Sederhana
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Overview & Action Header */}
+      <div className="rounded-xl border border-primary/20 bg-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Zap className="size-5 text-primary" />
+              <h2 className="font-heading text-lg font-bold">
+                {plan.title || project.title}
+              </h2>
+            </div>
+            {plan.summary && (
+              <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+                {plan.summary}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <CopyButton
+              text={simplePlanToMarkdown(project)}
+              label="Salin Plan Markdown"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                downloadText(
+                  `${slugify(plan.title || project.title)}-plan.md`,
+                  simplePlanToMarkdown(project),
+                )
+              }
+            >
+              <Download className="size-3.5" /> Download (.md)
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={generating}
+              onClick={onGenerateSimplePlan}
+            >
+              {generating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3.5" />
+              )}
+              Regenerasi
+            </Button>
+          </div>
+        </div>
+
+        {/* Tech Stack Pills */}
+        {plan.techStack?.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+            <span className="font-mono text-xs text-muted-foreground uppercase tracking-wider">
+              Tech Stack:
+            </span>
+            {plan.techStack.map((tech: string) => (
+              <span
+                key={tech}
+                className="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-medium text-primary"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Execution Steps */}
+      {plan.steps?.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="font-heading text-md flex items-center gap-2 font-semibold">
+            <Terminal className="size-4 text-primary" />
+            Alur Langkah Eksekusi ({plan.steps.length} Step)
+          </h3>
+          <div className="grid gap-4">
+            {plan.steps.map((s: any, idx: number) => (
+              <div
+                key={s.stepNumber || idx}
+                className="rounded-xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex size-7 items-center justify-center rounded-lg bg-primary/15 font-mono text-xs font-bold text-primary">
+                      0{s.stepNumber || idx + 1}
+                    </span>
+                    <h4 className="font-heading text-base font-semibold">
+                      {s.title}
+                    </h4>
+                  </div>
+                  {s.codeSnippet && (
+                    <CopyButton text={s.codeSnippet} label="Salin Kode" />
+                  )}
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  {s.description}
+                </p>
+                {s.codeSnippet && (
+                  <div className="mt-3 overflow-x-auto rounded-lg border border-border bg-background/80 p-3 font-mono text-xs text-foreground">
+                    <pre>{s.codeSnippet}</pre>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Full Script Skeleton Code */}
+      {plan.fullScriptSkeleton && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileCode className="size-4 text-primary" />
+              <h3 className="font-heading text-md font-semibold">
+                Script Skeleton / Template Code
+              </h3>
+            </div>
+            <CopyButton
+              text={plan.fullScriptSkeleton}
+              label="Salin Kode Template"
+            />
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Template kode dasar ini dapat langsung kamu gunakan sebagai titik awal file script milikmu.
+          </p>
+          <div className="overflow-x-auto rounded-lg border border-border bg-background/90 p-4 font-mono text-xs text-foreground leading-relaxed">
+            <pre>{plan.fullScriptSkeleton}</pre>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt AI Coding Agent */}
+      {plan.aiPrompt && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              <h3 className="font-heading text-md font-semibold text-foreground">
+                Prompt Eksekusi untuk AI Coding Agent
+              </h3>
+            </div>
+            <CopyButton text={plan.aiPrompt} label="Salin Prompt AI" />
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Copy prompt ini langsung ke **Cursor**, **Claude Code**, atau **GitHub Copilot** agar agent menyelesaikan seluruh script secara otomatis!
+          </p>
+          <div className="rounded-lg border border-primary/20 bg-background/80 p-3.5 font-mono text-xs text-foreground/90 whitespace-pre-wrap">
+            {plan.aiPrompt}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1073,6 +1311,25 @@ function GeneratingState() {
   );
 }
 
+function GeneratingSimplePlanState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="relative mb-6">
+        <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+        <div className="relative inline-flex size-16 items-center justify-center rounded-2xl bg-primary/10">
+          <Zap className="size-7 animate-pulse text-primary" />
+        </div>
+      </div>
+      <h2 className="font-heading text-xl font-semibold">
+        Menyusun Plan Script / Sederhana…
+      </h2>
+      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+        AI sedang menganalisis idemu dan menyusun alur eksekusi, script skeleton, serta prompt AI agent.
+      </p>
+    </div>
+  );
+}
+
 // ---------- utama ----------
 
 export function ProjectPage() {
@@ -1083,23 +1340,57 @@ export function ProjectPage() {
   const generate = useAction(api.prdActions.generatePrd);
   const generateStructure = useAction(api.prdActions.generateStructure);
   const generateQuestions = useAction(api.prdActions.generateQuestions);
+  const generateSimplePlanAction = useAction(api.prdActions.generateSimplePlan);
   const chooseMode = useMutation(api.prd.chooseStructureMode);
   const proceedToQuestions = useMutation(api.prd.proceedToQuestions);
   const submitAnswers = useMutation(api.prd.submitAnswers);
   const deleteProject = useMutation(api.prd.deleteProject);
   const structTriggered = useRef(false);
   const questionTriggered = useRef(false);
+  const simplePlanTriggered = useRef(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [generatingSimplePlan, setGeneratingSimplePlan] = useState(false);
   const [submittingAnswers, setSubmittingAnswers] = useState(false);
   const [choosingMode, setChoosingMode] = useState(false);
   const [proceeding, setProceeding] = useState(false);
 
-  const status = data?.project?.status;
-  const structureMode = data?.project?.structureMode;
+  const project = data?.project;
+  const features = data?.features || [];
+  const messages = data?.messages || [];
+  const status = project?.status;
+  const structureMode = project?.structureMode;
 
-  // Mulai otomatis generate struktur AI, lalu generate pertanyaan.
+  const handleGenerateSimplePlan = async () => {
+    setGeneratingSimplePlan(true);
+    try {
+      const res = await generateSimplePlanAction({ projectId });
+      if (res.ok) {
+        toast.success("Plan Sederhana berhasil dibuat!");
+      } else {
+        toast.error(res.error || "Gagal membuat Plan Sederhana");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Gagal membuat Plan Sederhana");
+    } finally {
+      setGeneratingSimplePlan(false);
+    }
+  };
+
+  // Mulai otomatis generate struktur AI, lalu generate pertanyaan / plan sederhana.
   // biome-ignore lint/correctness/useExhaustiveDependencies: run on status change
   useEffect(() => {
+    if (!project) return;
+
+    if (
+      project.planType === "simple_script" &&
+      !project.simplePlan &&
+      !simplePlanTriggered.current
+    ) {
+      simplePlanTriggered.current = true;
+      handleGenerateSimplePlan();
+      return;
+    }
+
     if (
       status === "structuring" &&
       structureMode === "ai" &&
@@ -1112,7 +1403,7 @@ export function ProjectPage() {
       questionTriggered.current = true;
       generateQuestions({ projectId }).catch(() => {});
     }
-  }, [status, structureMode]);
+  }, [status, structureMode, project?.planType, project?.simplePlan]);
 
   const handleChooseMode = async (mode: "ai" | "manual") => {
     setChoosingMode(true);
@@ -1157,7 +1448,7 @@ export function ProjectPage() {
       </div>
     );
   }
-  if (data === null) {
+  if (data === null || !project) {
     return (
       <div className="py-24 text-center">
         <p className="text-muted-foreground">PRD tidak ditemukan.</p>
@@ -1167,8 +1458,6 @@ export function ProjectPage() {
       </div>
     );
   }
-
-  const { project, features, messages } = data;
 
   const runGenerate = async () => {
     setRegenerating(true);
@@ -1180,6 +1469,10 @@ export function ProjectPage() {
   };
 
   const handleRetry = async () => {
+    if (project.planType === "simple_script") {
+      handleGenerateSimplePlan();
+      return;
+    }
     // Langkah struktur gagal (mode AI, belum ada struktur) → susun ulang struktur.
     if (project.structureMode === "ai" && !(project.structure?.length)) {
       structTriggered.current = true;
@@ -1205,6 +1498,11 @@ export function ProjectPage() {
     await runGenerate();
   };
 
+  const defaultTab =
+    project.planType === "simple_script" || project.simplePlan
+      ? "simplePlan"
+      : "prd";
+
   return (
     <div className="w-full space-y-6">
       {/* header */}
@@ -1221,37 +1519,55 @@ export function ProjectPage() {
             {project.title}
           </h1>
         </div>
-        {project.status === "ready" && (
+        {(project.status === "ready" || project.simplePlan) && (
           <div className="flex flex-wrap gap-2">
-            <CopyButton
-              text={prdToMarkdown(project, features)}
-              label="Copy PRD"
-            />
             <Button
               variant="outline"
               size="sm"
-              onClick={() =>
-                downloadText(
-                  `${slugify(project.title)}.md`,
-                  prdToMarkdown(project, features),
-                )
-              }
+              disabled={generatingSimplePlan}
+              onClick={handleGenerateSimplePlan}
             >
-              <Download className="size-3.5" /> Download
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={regenerating}
-              onClick={runGenerate}
-            >
-              {regenerating ? (
-                <Loader2 className="size-3.5 animate-spin" />
+              {generatingSimplePlan ? (
+                <Loader2 className="size-3.5 animate-spin text-primary" />
               ) : (
-                <RefreshCw className="size-3.5" />
+                <Zap className="size-3.5 text-primary" />
               )}
-              Regenerate
+              {project.simplePlan ? "Regen Plan Sederhana" : "Buat Plan Sederhana"}
             </Button>
+
+            {project.status === "ready" && (
+              <>
+                <CopyButton
+                  text={prdToMarkdown(project, features)}
+                  label="Copy PRD"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    downloadText(
+                      `${slugify(project.title)}.md`,
+                      prdToMarkdown(project, features),
+                    )
+                  }
+                >
+                  <Download className="size-3.5" /> Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={regenerating}
+                  onClick={runGenerate}
+                >
+                  {regenerating ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-3.5" />
+                  )}
+                  Regenerate PRD
+                </Button>
+              </>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -1268,23 +1584,33 @@ export function ProjectPage() {
         )}
       </div>
 
-      {/* stepper alur (disembunyikan setelah PRD siap) */}
-      {project.status !== "ready" && project.status !== "error" && (
-        <div className="rounded-xl border border-border bg-card/60 py-3">
-          <FlowStepper
-            current={
-              project.status === "choosing" ||
-              project.status === "structuring" ||
-              project.status === "structure_ready"
-                ? "struktur"
-                : "prd"
-            }
-          />
-        </div>
-      )}
+      {/* stepper alur (disembunyikan setelah PRD/Plan siap atau jika mode simple_script) */}
+      {project.planType !== "simple_script" &&
+        project.status !== "ready" &&
+        project.status !== "error" && (
+          <div className="rounded-xl border border-border bg-card/60 py-3">
+            <FlowStepper
+              current={
+                project.status === "choosing" ||
+                project.status === "structuring" ||
+                project.status === "structure_ready"
+                  ? "struktur"
+                  : "prd"
+              }
+            />
+          </div>
+        )}
 
       {/* isi */}
-      {project.status === "choosing" ? (
+      {generatingSimplePlan ? (
+        <GeneratingSimplePlanState />
+      ) : project.planType === "simple_script" && project.simplePlan ? (
+        <SimplePlanTab
+          project={project}
+          onGenerateSimplePlan={handleGenerateSimplePlan}
+          generating={generatingSimplePlan}
+        />
+      ) : project.status === "choosing" ? (
         <StructureModeChoice onChoose={handleChooseMode} busy={choosingMode} />
       ) : project.status === "structuring" && !regenerating ? (
         <StructuringState />
@@ -1313,13 +1639,13 @@ export function ProjectPage() {
             <TriangleAlert className="size-6 text-destructive" />
           </div>
           <h2 className="font-heading text-lg font-semibold">
-            Gagal membuat PRD
+            Gagal menyusun plan
           </h2>
           <p className="mt-1 max-w-md text-sm text-muted-foreground">
             {project.error || "Terjadi kesalahan saat memanggil AI."}
           </p>
-          <Button className="mt-5" onClick={handleRetry} disabled={regenerating}>
-            {regenerating ? (
+          <Button className="mt-5" onClick={handleRetry} disabled={regenerating || generatingSimplePlan}>
+            {regenerating || generatingSimplePlan ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <RefreshCw className="size-4" />
@@ -1330,14 +1656,20 @@ export function ProjectPage() {
       ) : regenerating ? (
         <GeneratingState />
       ) : (
-        <Tabs defaultValue="prd">
+        <Tabs defaultValue={defaultTab}>
           <TabsList
             className={`grid w-full ${
-              project.structure?.length
-                ? "max-w-xl grid-cols-5"
-                : "max-w-md grid-cols-4"
+              project.simplePlan && project.structure?.length
+                ? "max-w-2xl grid-cols-6"
+                : project.simplePlan || project.structure?.length
+                  ? "max-w-xl grid-cols-5"
+                  : "max-w-md grid-cols-4"
             }`}
           >
+            <TabsTrigger value="simplePlan">
+              <Zap className="size-4 text-primary" />
+              <span className="hidden sm:inline">Plan Sederhana</span>
+            </TabsTrigger>
             <TabsTrigger value="prd">
               <FileText className="size-4" />
               <span className="hidden sm:inline">PRD</span>
@@ -1361,6 +1693,14 @@ export function ProjectPage() {
               <span className="hidden sm:inline">Chat</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="simplePlan" className="mt-5">
+            <SimplePlanTab
+              project={project}
+              onGenerateSimplePlan={handleGenerateSimplePlan}
+              generating={generatingSimplePlan}
+            />
+          </TabsContent>
           <TabsContent value="prd" className="mt-5">
             <OverviewTab project={project} />
           </TabsContent>

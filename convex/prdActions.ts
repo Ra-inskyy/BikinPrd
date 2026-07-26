@@ -677,4 +677,150 @@ Jika pengguna meminta perubahan (menambah/menghapus/mengubah fitur, mengubah sco
   },
 });
 
+const SIMPLE_PLAN_SCHEMA = {
+  type: "object",
+  properties: {
+    title: {
+      type: "string",
+      description:
+        "Judul script / project plan sederhana yang ringkas dan jelas (maks 60 karakter).",
+    },
+    summary: {
+      type: "string",
+      description:
+        "Ringkasan singkat 2-3 kalimat mengenai tujuan dan alur script/project ini.",
+    },
+    techStack: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Daftar bahasa pemrograman, library, atau tools yang dibutuhkan (misal: Python, requests, BeautifulSoup, atau Node.js, Express, dotenv).",
+    },
+    steps: {
+      type: "array",
+      description:
+        "3-6 langkah eksekusi utama yang terstruktur, berurutan, dan langsung ke sasaran.",
+      items: {
+        type: "object",
+        properties: {
+          stepNumber: {
+            type: "number",
+            description: "Nomor urut langkah (1, 2, 3, dst).",
+          },
+          title: {
+            type: "string",
+            description: "Judul langkah yang singkat.",
+          },
+          description: {
+            type: "string",
+            description:
+              "Penjelasan detail apa yang dilakukan di langkah ini.",
+          },
+          codeSnippet: {
+            type: "string",
+            description:
+              "Contoh potongan kode ringkas / fungsi utama untuk langkah ini (opsional).",
+          },
+        },
+        required: ["stepNumber", "title", "description"],
+      },
+    },
+    fullScriptSkeleton: {
+      type: "string",
+      description:
+        "Kode/script lengkap skeleton (template dasar) yang dapat langsung dicopy dan dijalankan oleh pengguna atau AI agent.",
+    },
+    aiPrompt: {
+      type: "string",
+      description:
+        "Prompt instruksi ringkas dan efisien untuk diberikan ke AI coding agent (Cursor / Claude Code / Copilot) agar dapat mengimplementasikan seluruh script dalam 1 perintah.",
+    },
+  },
+  required: [
+    "title",
+    "summary",
+    "techStack",
+    "steps",
+    "fullScriptSkeleton",
+    "aiPrompt",
+  ],
+};
+
+export const generateSimplePlan = action({
+  args: { projectId: v.id("projects") },
+  returns: v.object({ ok: v.boolean(), error: v.optional(v.string()) }),
+  handler: async (ctx, { projectId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const data = await ctx.runQuery(api.prd.getProjectInternal, { projectId });
+    if (!data || data.project.userId !== userId) {
+      throw new Error("Project not found");
+    }
+
+    const idea: string = data.project.idea;
+    const context: string | undefined = data.project.context;
+
+    const prompt = `Kamu adalah software engineer & prompt architect senior. Tugasmu adalah menyusun PLAN PROJECT / SCRIPT SEDERHANA (Lightweight Plan) berdasarkan permintaan ide di bawah.
+
+PRINSIP UTAMA:
+- HINDARI format PRD enterprise yang terlalu panjang/bertele-tele.
+- Buat plan yang RINGKAS, PRAKTIS, dan SIAP DIEKSEKUSI langsung.
+- Pecah menjadi 3-6 langkah eksekusi yang jelas.
+- Berikan template/skeleton kode lengkap yang bersih dan rapi.
+- Sertakan prompt siap pakai untuk AI Coding Agent (Cursor, Claude Code, Copilot, dll).
+- Semua penjelasan dalam Bahasa Indonesia yang profesional dan to-the-point.
+
+=== IDE PROJECT / SCRIPT ===
+${idea}
+${context ? `\n=== KONTEKS TAMBAHAN ===\n${context}` : ""}`;
+
+    try {
+      const res = await callTool<AiResult<any>>("ai_structured_output", {
+        prompt,
+        output_schema: SIMPLE_PLAN_SCHEMA,
+        intelligence_level: "smart",
+      });
+      if (res.error || !res.result) {
+        throw new Error(res.error || "AI tidak mengembalikan hasil");
+      }
+
+      const raw = res.result;
+      const simplePlan = {
+        title: String(raw.title || data.project.title).slice(0, 80),
+        summary: String(raw.summary || ""),
+        techStack: Array.isArray(raw.techStack)
+          ? raw.techStack.map((t: any) => String(t))
+          : [],
+        steps: Array.isArray(raw.steps)
+          ? raw.steps.map((s: any, idx: number) => ({
+              stepNumber:
+                typeof s.stepNumber === "number" ? s.stepNumber : idx + 1,
+              title: String(s.title || `Langkah ${idx + 1}`),
+              description: String(s.description || ""),
+              codeSnippet: s.codeSnippet ? String(s.codeSnippet) : undefined,
+            }))
+          : [],
+        fullScriptSkeleton: raw.fullScriptSkeleton
+          ? String(raw.fullScriptSkeleton)
+          : undefined,
+        aiPrompt: String(raw.aiPrompt || ""),
+      };
+
+      await ctx.runMutation(internal.prd.applySimplePlan, {
+        projectId,
+        simplePlan,
+      });
+      return { ok: true };
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      await ctx.runMutation(internal.prd.markProjectError, {
+        projectId,
+        error: msg,
+      });
+      return { ok: false, error: msg };
+    }
+  },
+});
+
 export const MODEL_INFO = MODEL_LABEL;
