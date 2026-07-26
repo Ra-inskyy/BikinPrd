@@ -138,7 +138,7 @@ export const getUserQuota = query({
       .first();
 
     const isToday = quota?.lastCreatedDate === today;
-    const countToday = isToday ? quota.countToday : 0;
+    const countToday = isToday ? (quota?.countToday ?? 0) : 0;
     const remainingToday = Math.max(0, 1 - countToday);
     const bonusCredits = quota?.bonusCredits ?? 0;
 
@@ -173,7 +173,7 @@ export const createDraftProject = mutation({
       .first();
 
     const isToday = quota?.lastCreatedDate === today;
-    const countToday = isToday ? quota.countToday : 0;
+    const countToday = isToday ? (quota?.countToday ?? 0) : 0;
     const bonusCredits = quota?.bonusCredits ?? 0;
 
     // Prioritas 1: Pakai Kuota Harian (1/1)

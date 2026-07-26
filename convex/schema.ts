@@ -119,8 +119,9 @@ const schema = defineSchema({
   // Lacak kuota harian pembuatan PRD (1 PRD per hari per user) & kredit bonus
   userQuotas: defineTable({
     userId: v.id("users"),
-    lastCreatedDate: v.string(), // format "YYYY-MM-DD"
-    countToday: v.number(),
+    lastCreatedDate: v.optional(v.string()), // format "YYYY-MM-DD"
+    countToday: v.optional(v.number()),
+    totalCreated: v.optional(v.number()),
     bonusCredits: v.optional(v.number()), // kredit tambahan dari top-up
   }).index("by_user", ["userId"]),
 
