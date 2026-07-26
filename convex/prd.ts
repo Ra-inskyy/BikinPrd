@@ -5,7 +5,7 @@ import { internalMutation, mutation, query } from "./_generated/server";
 
 async function requireUser(ctx: { auth: any }) {
   const userId = await getAuthUserId(ctx as any);
-  if (!userId) throw new Error("Not authenticated");
+  if (!userId) throw new ConvexError("Harus login terlebih dahulu");
   return userId as Id<"users">;
 }
 
@@ -163,7 +163,7 @@ export const createDraftProject = mutation({
   handler: async (ctx, { idea, context, planType }) => {
     const userId = await requireUser(ctx);
     const trimmed = idea.trim();
-    if (!trimmed) throw new Error("Ide tidak boleh kosong");
+    if (!trimmed) throw new ConvexError("Ide tidak boleh kosong");
 
     const today = getTodayDateString();
 
@@ -202,7 +202,7 @@ export const createDraftProject = mutation({
     }
     // Tidak ada kuota maupun kredit bonus
     else {
-      throw new Error(
+      throw new ConvexError(
         "Kuota harian kamu sudah habis (1/1 PRD hari ini) dan kamu belum memiliki Kredit Bonus. Silakan Top-Up kredit untuk membuat PRD baru!",
       );
     }

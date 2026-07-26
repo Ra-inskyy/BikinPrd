@@ -70,7 +70,10 @@ function NewPrdComposer({
       });
       navigate(`/project/${projectId}`, { state: { autostart: true } });
     } catch (e: any) {
-      const msg = e?.message || "Gagal membuat PRD. Coba lagi.";
+      const msg =
+        typeof e?.data === "string"
+          ? e.data
+          : e?.message || "Gagal membuat PRD. Coba lagi.";
       toast.error(msg);
       setSubmitting(false);
     }
