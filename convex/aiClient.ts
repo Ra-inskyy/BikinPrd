@@ -121,16 +121,33 @@ async function aiStructuredOutput(
       }
 
       const rawText = await response.text();
-      let cleanText = rawText.trim();
-      if (cleanText.includes("data: [DONE]")) {
-        cleanText = cleanText.split("data: [DONE]")[0].trim();
-      }
+      let content = "";
 
-      const json = safeParseJson(cleanText) as
+      const json = safeParseJson(rawText) as
         | { choices?: { message?: { content?: string } }[] }
         | undefined;
 
-      const content = json?.choices?.[0]?.message?.content;
+      if (json?.choices?.[0]?.message?.content) {
+        content = json.choices[0].message.content;
+      } else if (rawText.includes("data:")) {
+        const lines = rawText.split("\n");
+        const parts: string[] = [];
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("data:") && !trimmed.includes("[DONE]")) {
+            const dataStr = trimmed.slice(5).trim();
+            if (!dataStr) continue;
+            const chunk = safeParseJson(dataStr) as any;
+            const delta =
+              chunk?.choices?.[0]?.delta?.content ||
+              chunk?.choices?.[0]?.text ||
+              "";
+            if (delta) parts.push(delta);
+          }
+        }
+        content = parts.join("");
+      }
+
       if (!content) {
         return { result: null, error: "Respons AI kosong" };
       }
