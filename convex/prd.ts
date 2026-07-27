@@ -396,6 +396,37 @@ export const deleteProject = mutation({
   },
 });
 
+export const resetProjectStatus = mutation({
+  args: { projectId: v.id("projects") },
+  returns: v.null(),
+  handler: async (ctx, { projectId }) => {
+    const userId = await requireUser(ctx);
+    const project = await ctx.db.get(projectId);
+    if (!project || project.userId !== userId) {
+      throw new ConvexError("Proyek tidak ditemukan");
+    }
+
+    let nextStatus: Doc<"projects">["status"] = "structuring";
+    if (project.planType === "simple_script") {
+      nextStatus = "generating";
+    } else if (project.answers && project.answers.length > 0) {
+      nextStatus = "generating";
+    } else if (project.structure && project.structure.length > 0) {
+      nextStatus = "preparing";
+    } else if (project.structureMode) {
+      nextStatus = "structuring";
+    } else {
+      nextStatus = "choosing";
+    }
+
+    await ctx.db.patch(projectId, {
+      status: nextStatus,
+      error: undefined,
+    });
+    return null;
+  },
+});
+
 export const updateContext = mutation({
   args: { projectId: v.id("projects"), context: v.string() },
   returns: v.null(),

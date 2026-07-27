@@ -1342,6 +1342,7 @@ export function ProjectPage() {
   const generateQuestions = useAction(api.prdActions.generateQuestions);
   const generateSimplePlanAction = useAction(api.prdActions.generateSimplePlan);
   const chooseMode = useMutation(api.prd.chooseStructureMode);
+  const resetStatus = useMutation(api.prd.resetProjectStatus);
   const proceedToQuestions = useMutation(api.prd.proceedToQuestions);
   const submitAnswers = useMutation(api.prd.submitAnswers);
   const deleteProject = useMutation(api.prd.deleteProject);
@@ -1469,6 +1470,18 @@ export function ProjectPage() {
   };
 
   const handleRetry = async () => {
+    // Reset triggers agar useEffect / action tidak terhalang
+    structTriggered.current = false;
+    questionTriggered.current = false;
+    simplePlanTriggered.current = false;
+
+    try {
+      await resetStatus({ projectId });
+    } catch (e: any) {
+      toast.error("Gagal mereset status proyek.");
+      return;
+    }
+
     if (project.planType === "simple_script") {
       handleGenerateSimplePlan();
       return;
@@ -1479,6 +1492,8 @@ export function ProjectPage() {
       setRegenerating(true);
       try {
         await generateStructure({ projectId });
+      } catch (e: any) {
+        toast.error(e?.message || "Gagal menyusun struktur");
       } finally {
         setRegenerating(false);
       }
@@ -1490,6 +1505,8 @@ export function ProjectPage() {
       setRegenerating(true);
       try {
         await generateQuestions({ projectId });
+      } catch (e: any) {
+        toast.error(e?.message || "Gagal membuat pertanyaan");
       } finally {
         setRegenerating(false);
       }
