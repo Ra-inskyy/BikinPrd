@@ -107,23 +107,38 @@ PETUNJUK EKSEKUSI:
         prompt,
         output_schema: AGENT_STEP_SCHEMA,
         intelligence_level: "smart",
+        max_tokens: 4000,
       });
 
       if (res.error || !res.result) {
         throw new Error(res.error || "AI Agent tidak mengembalikan hasil");
       }
 
-      const raw = res.result;
+      const raw = res.result || {};
       const thoughts: string[] = Array.isArray(raw.thoughts)
         ? raw.thoughts.map((t: any) => String(t))
+        : [String(raw.summary || "Agent telah menganalisis instruksi.")];
+
+      let newFiles = Array.isArray(raw.files)
+        ? raw.files
+            .filter((f: any) => f && (f.path || f.content))
+            .map((f: any) => ({
+              path: String(f.path || "main.py"),
+              content: String(f.content || ""),
+              language: f.language ? String(f.language) : "python",
+            }))
         : [];
-      const newFiles = Array.isArray(raw.files)
-        ? raw.files.map((f: any) => ({
-            path: String(f.path || "file.txt"),
-            content: String(f.content || ""),
-            language: f.language ? String(f.language) : "python",
-          }))
-        : [];
+
+      if (newFiles.length === 0 && raw.code) {
+        newFiles = [
+          {
+            path: "main.py",
+            content: String(raw.code),
+            language: "python",
+          },
+        ];
+      }
+
       const summary = String(raw.summary || "Selesai menyusun kode.");
 
       // Catat log pemikiran agent
