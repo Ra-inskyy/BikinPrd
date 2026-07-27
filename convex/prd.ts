@@ -110,6 +110,8 @@ function getTodayDateString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const DAILY_FREE_LIMIT = 5;
+
 export const getUserQuota = query({
   args: {},
   returns: v.object({
@@ -126,10 +128,10 @@ export const getUserQuota = query({
     if (!userId) {
       return {
         countToday: 0,
-        maxDailyLimit: 1,
-        remainingToday: 1,
+        maxDailyLimit: DAILY_FREE_LIMIT,
+        remainingToday: DAILY_FREE_LIMIT,
         bonusCredits: 0,
-        totalAvailable: 1,
+        totalAvailable: DAILY_FREE_LIMIT,
       };
     }
     const quota = await ctx.db
@@ -139,12 +141,12 @@ export const getUserQuota = query({
 
     const isToday = quota?.lastCreatedDate === today;
     const countToday = isToday ? (quota?.countToday ?? 0) : 0;
-    const remainingToday = Math.max(0, 1 - countToday);
+    const remainingToday = Math.max(0, DAILY_FREE_LIMIT - countToday);
     const bonusCredits = quota?.bonusCredits ?? 0;
 
     return {
       countToday,
-      maxDailyLimit: 1,
+      maxDailyLimit: DAILY_FREE_LIMIT,
       remainingToday,
       bonusCredits,
       totalAvailable: remainingToday + bonusCredits,
@@ -176,12 +178,12 @@ export const createDraftProject = mutation({
     const countToday = isToday ? (quota?.countToday ?? 0) : 0;
     const bonusCredits = quota?.bonusCredits ?? 0;
 
-    // Prioritas 1: Pakai Kuota Harian (1/1)
-    if (countToday < 1) {
+    // Prioritas 1: Pakai Kuota Harian (hingga 5/hari)
+    if (countToday < DAILY_FREE_LIMIT) {
       if (quota) {
         await ctx.db.patch(quota._id, {
           lastCreatedDate: today,
-          countToday: 1,
+          countToday: countToday + 1,
         });
       } else {
         await ctx.db.insert("userQuotas", {
@@ -203,7 +205,7 @@ export const createDraftProject = mutation({
     // Tidak ada kuota maupun kredit bonus
     else {
       throw new ConvexError(
-        "Kuota harian kamu sudah habis (1/1 PRD hari ini) dan kamu belum memiliki Kredit Bonus. Silakan Top-Up kredit untuk membuat PRD baru!",
+        `Kuota harian gratis kamu (${DAILY_FREE_LIMIT}/${DAILY_FREE_LIMIT} PRD hari ini) sudah habis. Silakan Top-Up kredit untuk membuat PRD baru!`,
       );
     }
 
