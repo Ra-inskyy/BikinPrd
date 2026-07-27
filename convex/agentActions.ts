@@ -84,6 +84,67 @@ export const runAgentStep = action({
       logs: currentLogs,
     });
 
+    let prdDocumentContext = "";
+    if (session.projectId) {
+      try {
+        const prdData = await ctx.runQuery(api.prd.getProjectInternal, {
+          projectId: session.projectId,
+        });
+        if (prdData && prdData.project) {
+          const p = prdData.project;
+          const features = prdData.features || [];
+          const docLines: string[] = [];
+
+          docLines.push(`# DOKUMEN UTAMA: ${p.title}`);
+          if (p.summary) docLines.push(`## Ringkasan Proyek\n${p.summary}`);
+          if (p.problem) docLines.push(`## Masalah Utama\n${p.problem}`);
+          if (p.targetUsers) docLines.push(`## Target Pengguna\n${p.targetUsers}`);
+
+          if (p.goals?.length) {
+            docLines.push(`## Goals Proyek:\n${p.goals.map((g: string) => `- ${g}`).join("\n")}`);
+          }
+          if (p.nonGoals?.length) {
+            docLines.push(`## Non-Goals:\n${p.nonGoals.map((ng: string) => `- ${ng}`).join("\n")}`);
+          }
+          if (p.techStack?.length) {
+            docLines.push(`## Rekomendasi Tech Stack:\n${p.techStack.map((t: string) => `- ${t}`).join("\n")}`);
+          }
+          if (p.metrics?.length) {
+            docLines.push(`## Metrik Keberhasilan:\n${p.metrics.map((m: string) => `- ${m}`).join("\n")}`);
+          }
+
+          if (features.length > 0) {
+            docLines.push("## DAFTAR FITUR & SPESIFIKASI DETAIL:");
+            for (const f of features) {
+              docLines.push(`### Fitur: ${f.name} [Prioritas ${f.priority}]\n${f.description || ""}\n\nSpesifikasi:\n${f.spec || ""}`);
+              if (f.tasks?.length) {
+                docLines.push("Tasks Teknis:\n" + f.tasks.map((t: string) => `- [ ] ${t}`).join("\n"));
+              }
+            }
+          }
+
+          if (p.simplePlan) {
+            const plan = p.simplePlan;
+            docLines.push(`## PLAN SEDERHANA: ${plan.title || p.title}`);
+            if (plan.summary) docLines.push(plan.summary);
+            if (plan.steps?.length) {
+              docLines.push("Alur Langkah Eksekusi:\n" + plan.steps.map((s: any) => `- Langkah ${s.stepNumber || 1}: ${s.title} — ${s.description}`).join("\n"));
+            }
+            if (plan.fullScriptSkeleton) {
+              docLines.push(`Template Kode Skeleton:\n\`\`\`\n${plan.fullScriptSkeleton}\n\`\`\``);
+            }
+            if (plan.aiPrompt) {
+              docLines.push(`Prompt Instruksi AI Original:\n${plan.aiPrompt}`);
+            }
+          }
+
+          prdDocumentContext = `\n=== DOKUMEN PRD / PLAN LENGKAP PROYEK (FULL DOCUMENT) ===\n${docLines.join("\n\n")}`;
+        }
+      } catch (err) {
+        console.error("Gagal memuat konteks dokumen PRD lengkap:", err);
+      }
+    }
+
     const fileContext =
       currentFiles.length > 0
         ? `\n=== BERKAS PROYEK SAAT INI ===\n${JSON.stringify(currentFiles, null, 2)}`
@@ -93,11 +154,11 @@ export const runAgentStep = action({
 Tugasmu adalah merealisasikan goal proyek pengguna dengan menghasilkan BERKAS PROYEK LENGKAP (multi-file) yang siap dieksekusi di lingkungan Sandbox (Python / JS Worker / Wasm).
 
 === GOAL AGENT ===
-${session.goal}
-${userInstruction ? `\n=== INSTRUKSI TAMBAHAN / REVISI DARIPENGGUNA ===\n${userInstruction}` : ""}${fileContext}
+${session.goal}${prdDocumentContext}
+${userInstruction ? `\n=== INSTRUKSI TAMBAHAN / REVISI DARI PENGGUNA ===\n${userInstruction}` : ""}${fileContext}
 
 PETUNJUK EKSEKUSI:
-1. Analisis goal & struktur file yang paling optimal (misal untuk Python: sertakan main.py, requirements.txt, README.md, dan modul pembantu jika diperlukan).
+1. Analisis goal & dokumen PRD lengkap di atas. Susun struktur file yang paling optimal (misal untuk Python: sertakan main.py, requirements.txt, README.md, dan modul pembantu jika diperlukan).
 2. Tulis kode yang BENAR-BENAR BERJALAN, bersih, lengkap, tanpa dummy comment atau placeholder "// todo".
 3. Sertakan penanganan error yang baik dan keluaran stdout yang jelas agar mudah diamati saat dijalankan di terminal.
 4. Semua pemikiran & ringkasan dalam Bahasa Indonesia.`;

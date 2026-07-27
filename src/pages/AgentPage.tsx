@@ -347,7 +347,7 @@ export function AgentPage() {
                       const pid = e.target.value;
                       setSelectedProjectId(pid);
                       const p = projects.find((x) => x._id === pid);
-                      if (p) setGoal(`Implementasikan kode proyek: ${p.title}\n\n${p.idea}`);
+                      if (p) setGoal(`Implementasikan seluruh berkas kode proyek berdasarkan Dokumen PRD / Plan Lengkap: "${p.title}"\n\nIde Inti: ${p.idea}`);
                     }}
                     className="w-full rounded-lg border border-border bg-background p-2 text-xs text-foreground"
                   >
