@@ -77,14 +77,14 @@ async function aiStructuredOutput(
   // supaya kegagalan sementara tidak langsung menggagalkan pembuatan PRD.
   const MAX_ATTEMPTS = 3;
   // Batas waktu per percobaan (ms). Sedikit di bawah batas aksi Convex.
-  const PER_ATTEMPT_TIMEOUT_MS = 110_000;
+  const PER_ATTEMPT_TIMEOUT_MS = 45_000;
   let lastError = "Gagal memanggil AI";
 
   const CANDIDATE_MODELS = [
     AI_MODEL,
-    "gemini",
-    "prd",
     "combomax",
+    "prd",
+    "gemini",
   ].filter((m, i, self) => Boolean(m) && self.indexOf(m) === i);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -116,11 +116,17 @@ async function aiStructuredOutput(
         const text = await response.text();
         // Ringkas pesan error HTML panjang (mis. halaman error Cloudflare).
         const brief = summarizeHttpError(response.status, text);
-        // 429 (rate limit) & 5xx (server/timeout) layak dicoba ulang.
-        if (
-          (response.status === 429 || response.status >= 500) &&
-          attempt < MAX_ATTEMPTS
-        ) {
+        const isRetryable =
+          response.status === 429 ||
+          response.status >= 500 ||
+          text.includes("rate limit") ||
+          text.includes("rate_limited") ||
+          text.includes("depleted") ||
+          text.includes("Bansos") ||
+          text.includes("429") ||
+          text.includes("503");
+
+        if (isRetryable && attempt < MAX_ATTEMPTS) {
           lastError = brief;
           await sleep(backoffMs(attempt));
           continue;
