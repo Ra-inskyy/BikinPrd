@@ -468,12 +468,9 @@ ${baseContext}`;
           max_tokens: 2000,
         },
       );
-      if (overviewRes.error || !overviewRes.result) {
-        throw new Error(overviewRes.error || "AI tidak mengembalikan hasil");
-      }
-      const overview = overviewRes.result;
+      let overview = overviewRes.result || {};
 
-      const baseFeatures: Array<{
+      let baseFeatures: Array<{
         name: string;
         description: string;
         priority: "P0" | "P1" | "P2";
@@ -487,8 +484,17 @@ ${baseContext}`;
             : "P1") as "P0" | "P1" | "P2",
         }));
 
+      // Fallback: Gunakan struktur fitur dari DB jika AI overview tidak mengembalikan array features
+      if (baseFeatures.length === 0 && structure.length > 0) {
+        baseFeatures = structure.map((f) => ({
+          name: f.name,
+          description: f.description || "",
+          priority: (f.phase === 1 ? "P0" : f.phase === 2 ? "P1" : "P2") as "P0" | "P1" | "P2",
+        }));
+      }
+
       if (baseFeatures.length === 0) {
-        throw new Error("AI tidak menghasilkan daftar fitur");
+        throw new Error("Daftar fitur proyek kosong. Silakan coba lagi.");
       }
 
       const featureListBlock = baseFeatures

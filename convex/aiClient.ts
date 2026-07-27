@@ -255,25 +255,26 @@ function safeParseJson(raw: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
-    // 4. Sanitasi trailing commas & unescaped control characters
-    const sanitized = text
+    // 4. Ambil objek JSON { ... } paling luar jika ada teks ekstra di awal/akhir
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      const candidate = text.slice(start, end + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        text = candidate;
+      }
+    }
+
+    // 5. Sanitasi trailing commas & control characters tak kasat mata
+    const cleaned = text
       .replace(/,\s*([\]}])/g, "$1") // hapus trailing commas [a, b,] atau {a: 1,}
-      .replace(/[\r\n]+/g, " "); // ganti newline tak ter-escape dengan spasi jika perlu
+      .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, ""); // hapus invalid control characters
 
     try {
-      return JSON.parse(sanitized);
+      return JSON.parse(cleaned);
     } catch {
-      // 5. Fallback: ambil objek JSON { ... } paling luar
-      const start = text.indexOf("{");
-      const end = text.lastIndexOf("}");
-      if (start !== -1 && end > start) {
-        const candidate = text.slice(start, end + 1).replace(/,\s*([\]}])/g, "$1");
-        try {
-          return JSON.parse(candidate);
-        } catch {
-          return undefined;
-        }
-      }
       return undefined;
     }
   }
