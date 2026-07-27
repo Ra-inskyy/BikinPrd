@@ -3,11 +3,12 @@ import {
   ArrowRight,
   FileText,
   Loader2,
+  RefreshCw,
   Sparkles,
   Trash2,
   TriangleAlert,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TopUpModal } from "@/components/TopUpModal";
 import { Button } from "@/components/ui/button";
@@ -21,12 +22,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { api } from "../../convex/_generated/api";
 
-const EXAMPLES = [
+const PRD_EXAMPLES_POOL = [
   "Aplikasi mobile untuk mencatat pengeluaran harian dengan kategori otomatis",
   "Marketplace jasa les privat yang mempertemukan guru dan murid",
   "Dashboard analitik untuk toko online di Shopee & Tokopedia",
-  "Tools SaaS untuk menjadwalkan postingan Instagram otomatis",
+  "Tools SaaS untuk menjadwalkan postingan Instagram & TikTok otomatis",
+  "Aplikasi Kasir POS Toko Kelontong Berbasis Web Offline-First",
+  "Platform E-Learning Interaktif dengan Kuis & Sertifikat Otomatis",
+  "Aplikasi Reservasi Meja Restoran & Order Makanan via QR Code",
+  "Portal Pencari Kerja Freelance Khusus Developer & Designer",
+  "Aplikasi Habit Tracker & Pemantau Kesehatan dengan Gamifikasi",
+  "Sistem Manajemen Stok & Inventaris Gudang Berbasis Barcode",
 ];
+
+const SCRIPT_EXAMPLES_POOL = [
+  "Script Python otomatis download video YouTube & ekstrak audio MP3",
+  "Script Web Scraper harga produk Shopee/Tokopedia kirim alert Telegram",
+  "Script Otomasi Backup Database MySQL ke Google Drive harian",
+  "Bot Telegram pemantau status uptime website & alarm error",
+  "Script Python pengubah berkas PDF banyak halaman ke gambar PNG",
+  "CLI Tool konversi massal gambar WebP ke PNG & kompres otomatis",
+  "Script Python auto unfollow akun Twitter/X non-aktif via API",
+  "Script Node.js parser file CSV laporan keuangan ke Excel otomatis",
+  "Script Python pemisah vokal & instrumen musik dengan AI Spleeter",
+  "Script CLI utilitas rename ribuan file foto berdasarkan tanggal EXIF",
+];
+
+function getRandomExamples(type: "standard" | "simple_script") {
+  const pool = type === "simple_script" ? SCRIPT_EXAMPLES_POOL : PRD_EXAMPLES_POOL;
+  return [...pool].sort(() => 0.5 - Math.random()).slice(0, 4);
+}
 
 function NewPrdComposer({
   quota,
@@ -46,6 +71,15 @@ function NewPrdComposer({
   const [showContext, setShowContext] = useState(false);
   const [planType, setPlanType] = useState<"standard" | "simple_script">("standard");
   const [submitting, setSubmitting] = useState(false);
+  const [examples, setExamples] = useState<string[]>([]);
+
+  useEffect(() => {
+    setExamples(getRandomExamples(planType));
+  }, [planType]);
+
+  const shuffleCurrentExamples = () => {
+    setExamples(getRandomExamples(planType));
+  };
 
   const countToday = quota?.countToday ?? 0;
   const bonusCredits = quota?.bonusCredits ?? 0;
@@ -192,18 +226,33 @@ function NewPrdComposer({
           </button>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          {EXAMPLES.map((ex) => (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              💡 Contoh saran {planType === "simple_script" ? "script / otomasi" : "ide aplikasi"}:
+            </span>
             <button
-              key={ex}
               type="button"
               disabled={isLimitReached}
-              onClick={() => setIdea(ex)}
-              className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-40"
+              onClick={shuffleCurrentExamples}
+              className="inline-flex items-center gap-1 text-[11px] font-mono text-muted-foreground hover:text-primary transition-colors disabled:opacity-40"
             >
-              {ex.length > 42 ? `${ex.slice(0, 42)}…` : ex}
+              <RefreshCw className="size-3" /> Acak saran
             </button>
-          ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {examples.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                disabled={isLimitReached}
+                onClick={() => setIdea(ex)}
+                className="rounded-full border border-border bg-secondary/50 px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground disabled:opacity-40"
+              >
+                {ex.length > 48 ? `${ex.slice(0, 48)}…` : ex}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center justify-between">
