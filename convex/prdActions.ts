@@ -480,10 +480,10 @@ ${baseContext}`;
         .map((f, i) => `${i + 1}. ${f.name} (${f.priority}) — ${f.description}`)
         .join("\n");
 
-      // --- Tahap 2: detail tiap fitur (paralel) ---
-      const detailResults = await Promise.all(
-        baseFeatures.map(async (f) => {
-          const detailPrompt = `Kamu adalah Product Manager senior sekaligus tech lead. Kamu sedang menyusun PRD dan sekarang fokus MENDETAILKAN SATU fitur saja agar LANGSUNG SIAP DIPAKAI AI coding agent (Cursor, Claude Code, dll).
+      // --- Tahap 2: detail tiap fitur (sequensial untuk mencegah overload server AI) ---
+      const detailResults: { spec: string; tasks: string[] }[] = [];
+      for (const f of baseFeatures) {
+        const detailPrompt = `Kamu adalah Product Manager senior sekaligus tech lead. Kamu sedang menyusun PRD dan sekarang fokus MENDETAILKAN SATU fitur saja agar LANGSUNG SIAP DIPAKAI AI coding agent (Cursor, Claude Code, dll).
 
 FITUR YANG DIDETAILKAN: "${f.name}" (prioritas ${f.priority})
 Deskripsi: ${f.description}
@@ -495,28 +495,27 @@ ${baseContext}
 
 Tugas: tulis 'spec' fitur ini dalam Markdown yang detail (deskripsi, user story, acceptance criteria sebagai checklist '- [ ]', dan catatan teknis, pakai heading '###'), lalu 'tasks' berupa 5-10 task teknis konkret & berurutan yang bisa langsung dikerjakan. Semua dalam Bahasa Indonesia.`;
 
-          const dRes = await callTool<AiResult<any>>("ai_structured_output", {
-            prompt: detailPrompt,
-            output_schema: FEATURE_DETAIL_SCHEMA,
-            intelligence_level: "smart",
-            max_tokens: 2500,
+        const dRes = await callTool<AiResult<any>>("ai_structured_output", {
+          prompt: detailPrompt,
+          output_schema: FEATURE_DETAIL_SCHEMA,
+          intelligence_level: "smart",
+          max_tokens: 2500,
+        });
+
+        if (dRes.error || !dRes.result) {
+          detailResults.push({
+            spec: `### ${f.name}\n\n${f.description}\n\n_(Detail spesifikasi gagal dibuat otomatis: ${dRes.error || "tidak ada hasil"}. Silakan regenerasi atau lengkapi lewat chat.)_`,
+            tasks: [] as string[],
           });
-          if (dRes.error || !dRes.result) {
-            // Jangan gagalkan seluruh PRD hanya karena satu fitur; beri
-            // fallback spec minimal agar hasil tetap lengkap.
-            return {
-              spec: `### ${f.name}\n\n${f.description}\n\n_(Detail spesifikasi gagal dibuat otomatis: ${dRes.error || "tidak ada hasil"}. Silakan regenerasi atau lengkapi lewat chat.)_`,
-              tasks: [] as string[],
-            };
-          }
-          return {
+        } else {
+          detailResults.push({
             spec: String(dRes.result.spec || ""),
             tasks: Array.isArray(dRes.result.tasks)
               ? dRes.result.tasks.map((t: any) => String(t)).filter(Boolean)
               : [],
-          };
-        }),
-      );
+          });
+        }
+      }
 
       const features = baseFeatures.map((f, i) => ({
         name: f.name,

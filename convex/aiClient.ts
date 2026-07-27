@@ -215,9 +215,18 @@ function summarizeHttpError(status: number, body: string): string {
  */
 function safeParseJson(raw: string): unknown {
   let text = raw.trim();
-  if (text.startsWith("```")) {
-    text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+  // Strip <think>...</think> jika ada (model seperti DeepSeek-R1 / thinking models)
+  if (text.includes("<think>")) {
+    text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
   }
+
+  // Extract dari markdown fence ```json ... ``` jika ada
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    text = fenceMatch[1].trim();
+  }
+
   try {
     return JSON.parse(text);
   } catch {
