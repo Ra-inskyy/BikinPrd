@@ -495,10 +495,15 @@ ${baseContext}`;
         .map((f, i) => `${i + 1}. ${f.name} (${f.priority}) — ${f.description}`)
         .join("\n");
 
-      // --- Tahap 2: detail tiap fitur (sequensial untuk mencegah overload server AI) ---
-      const detailResults: { spec: string; tasks: string[] }[] = [];
-      for (const f of baseFeatures) {
-        const detailPrompt = `Kamu adalah Product Manager senior sekaligus tech lead. Kamu sedang menyusun PRD dan sekarang fokus MENDETAILKAN SATU fitur saja agar LANGSUNG SIAP DIPAKAI AI coding agent (Cursor, Claude Code, dll).
+      // --- Tahap 2: detail tiap fitur (batching 3 paralel agar selesai dalam <45 detik & tidak hit Convex 120s timeout) ---
+      const detailResults: { spec: string; tasks: string[] }[] = new Array(baseFeatures.length);
+      const BATCH_SIZE = 3;
+
+      for (let i = 0; i < baseFeatures.length; i += BATCH_SIZE) {
+        const chunk = baseFeatures.slice(i, i + BATCH_SIZE);
+        const chunkResults = await Promise.all(
+          chunk.map(async (f) => {
+            const detailPrompt = `Kamu adalah Product Manager senior sekaligus tech lead. Kamu sedang menyusun PRD dan sekarang fokus MENDETAILKAN SATU fitur saja agar LANGSUNG SIAP DIPAKAI AI coding agent (Cursor, Claude Code, dll).
 
 FITUR YANG DIDETAILKAN: "${f.name}" (prioritas ${f.priority})
 Deskripsi: ${f.description}
@@ -510,25 +515,30 @@ ${baseContext}
 
 Tugas: tulis 'spec' fitur ini dalam Markdown yang detail (deskripsi, user story, acceptance criteria sebagai checklist '- [ ]', dan catatan teknis, pakai heading '###'), lalu 'tasks' berupa 5-10 task teknis konkret & berurutan yang bisa langsung dikerjakan. Semua dalam Bahasa Indonesia.`;
 
-        const dRes = await callTool<AiResult<any>>("ai_structured_output", {
-          prompt: detailPrompt,
-          output_schema: FEATURE_DETAIL_SCHEMA,
-          intelligence_level: "smart",
-          max_tokens: 2500,
-        });
+            const dRes = await callTool<AiResult<any>>("ai_structured_output", {
+              prompt: detailPrompt,
+              output_schema: FEATURE_DETAIL_SCHEMA,
+              intelligence_level: "smart",
+              max_tokens: 2500,
+            });
 
-        if (dRes.error || !dRes.result) {
-          detailResults.push({
-            spec: `### ${f.name}\n\n${f.description}\n\n_(Detail spesifikasi gagal dibuat otomatis: ${dRes.error || "tidak ada hasil"}. Silakan regenerasi atau lengkapi lewat chat.)_`,
-            tasks: [] as string[],
-          });
-        } else {
-          detailResults.push({
-            spec: String(dRes.result.spec || ""),
-            tasks: Array.isArray(dRes.result.tasks)
-              ? dRes.result.tasks.map((t: any) => String(t)).filter(Boolean)
-              : [],
-          });
+            if (dRes.error || !dRes.result) {
+              return {
+                spec: `### ${f.name}\n\n${f.description}\n\n_(Detail spesifikasi gagal dibuat otomatis: ${dRes.error || "tidak ada hasil"}. Silakan regenerasi atau lengkapi lewat chat.)_`,
+                tasks: [] as string[],
+              };
+            }
+            return {
+              spec: String(dRes.result.spec || ""),
+              tasks: Array.isArray(dRes.result.tasks)
+                ? dRes.result.tasks.map((t: any) => String(t)).filter(Boolean)
+                : [],
+            };
+          }),
+        );
+
+        for (let j = 0; j < chunkResults.length; j++) {
+          detailResults[i + j] = chunkResults[j];
         }
       }
 
