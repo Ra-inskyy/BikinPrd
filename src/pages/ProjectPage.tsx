@@ -1349,6 +1349,7 @@ export function ProjectPage() {
   const structTriggered = useRef(false);
   const questionTriggered = useRef(false);
   const simplePlanTriggered = useRef(false);
+  const prdTriggered = useRef(false);
   const [regenerating, setRegenerating] = useState(false);
   const [generatingSimplePlan, setGeneratingSimplePlan] = useState(false);
   const [submittingAnswers, setSubmittingAnswers] = useState(false);
@@ -1404,7 +1405,16 @@ export function ProjectPage() {
       questionTriggered.current = true;
       generateQuestions({ projectId }).catch(() => {});
     }
-  }, [status, structureMode, project?.planType, project?.simplePlan]);
+    if (
+      status === "generating" &&
+      !prdTriggered.current &&
+      !project.simplePlan &&
+      !project.summary
+    ) {
+      prdTriggered.current = true;
+      generate({ projectId }).catch(() => {});
+    }
+  }, [status, structureMode, project?.planType, project?.simplePlan, project?.summary]);
 
   const handleChooseMode = async (mode: "ai" | "manual") => {
     setChoosingMode(true);
@@ -1474,6 +1484,7 @@ export function ProjectPage() {
     structTriggered.current = false;
     questionTriggered.current = false;
     simplePlanTriggered.current = false;
+    prdTriggered.current = false;
 
     try {
       await resetStatus({ projectId });
