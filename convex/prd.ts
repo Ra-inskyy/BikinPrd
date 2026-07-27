@@ -466,6 +466,19 @@ export const updateFeature = mutation({
 // Mutation internal yang dipakai oleh actions (prdActions.ts)
 // ---------------------------------------------------------------------------
 
+export const setProjectStatus = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+    status: statusValidator,
+    error: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, { projectId, status, error }) => {
+    await ctx.db.patch(projectId, { status, error });
+    return null;
+  },
+});
+
 export const applyGeneratedPrd = internalMutation({
   args: {
     projectId: v.id("projects"),

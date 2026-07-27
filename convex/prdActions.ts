@@ -250,6 +250,11 @@ export const generateStructure = action({
     const idea: string = data.project.idea;
     const context: string | undefined = data.project.context;
 
+    await ctx.runMutation(internal.prd.setProjectStatus, {
+      projectId,
+      status: "structuring",
+    });
+
     const prompt = `Kamu adalah Product Manager & software architect senior. Berdasarkan ide produk di bawah, susun STRUKTUR FITUR aplikasi: daftar fitur/modul utama, dan untuk tiap fitur pecah menjadi sub-fitur konkret (layar, aksi, atau kemampuan di dalamnya).
 
 Aturan:
@@ -317,6 +322,11 @@ export const generateQuestions = action({
 
     const idea: string = data.project.idea;
     const context: string | undefined = data.project.context;
+
+    await ctx.runMutation(internal.prd.setProjectStatus, {
+      projectId,
+      status: "preparing",
+    });
 
     const prompt = `Kamu adalah Product Manager senior. Sebelum menyusun PRD lengkap, kamu perlu menggali detail dari pengguna dengan mengajukan pertanyaan klarifikasi yang tajam.
 
@@ -388,6 +398,11 @@ export const generatePrd = action({
 
     const idea: string = data.project.idea;
     const context: string | undefined = data.project.context;
+
+    await ctx.runMutation(internal.prd.setProjectStatus, {
+      projectId,
+      status: "generating",
+    });
 
     // Susun blok struktur fitur yang sudah disetujui (dari langkah Struktur)
     const structure: Array<{
@@ -759,6 +774,11 @@ export const generateSimplePlan = action({
 
     const idea: string = data.project.idea;
     const context: string | undefined = data.project.context;
+
+    await ctx.runMutation(internal.prd.setProjectStatus, {
+      projectId,
+      status: "generating",
+    });
 
     const prompt = `Kamu adalah software engineer & prompt architect senior. Tugasmu adalah menyusun PLAN PROJECT / SCRIPT SEDERHANA (Lightweight Plan) berdasarkan permintaan ide di bawah.
 
