@@ -7,6 +7,7 @@ import { PublicOnlyRoute } from "@/components/PublicOnlyRoute";
 import { ViktorAutoSignIn } from "@/components/ViktorAutoSignIn";
 import { ViktorProductAuthProvider } from "@/lib/viktor-spaces-access/ViktorProductAuthProvider";
 import {
+  AgentPage,
   DashboardPage,
   LandingPage,
   LoginPage,
@@ -35,6 +36,8 @@ export function AuthenticatedRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/project/:id" element={<ProjectPage />} />
+          <Route path="/agent" element={<AgentPage />} />
+          <Route path="/agent/:sessionId" element={<AgentPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

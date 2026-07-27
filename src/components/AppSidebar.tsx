@@ -1,6 +1,6 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
-import { FileText, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Bot, FileText, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { api } from "../../convex/_generated/api";
@@ -25,7 +25,10 @@ import {
   useSidebar,
 } from "./ui/sidebar";
 
-const navItems = [{ href: "/dashboard", label: "PRD Saya", icon: FileText }];
+const navItems = [
+  { href: "/dashboard", label: "PRD Saya", icon: FileText },
+  { href: "/agent", label: "AI Code Agent", icon: Bot },
+];
 
 function NavLink({
   href,

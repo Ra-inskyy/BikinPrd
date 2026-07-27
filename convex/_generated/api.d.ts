@@ -9,6 +9,8 @@
  */
 
 import type * as ViktorSpacesEmail from "../ViktorSpacesEmail.js";
+import type * as agent from "../agent.js";
+import type * as agentActions from "../agentActions.js";
 import type * as aiClient from "../aiClient.js";
 import type * as auth from "../auth.js";
 import type * as constants from "../constants.js";
@@ -31,6 +33,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ViktorSpacesEmail: typeof ViktorSpacesEmail;
+  agent: typeof agent;
+  agentActions: typeof agentActions;
   aiClient: typeof aiClient;
   auth: typeof auth;
   constants: typeof constants;

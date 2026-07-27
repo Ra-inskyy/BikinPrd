@@ -134,6 +134,41 @@ const schema = defineSchema({
     status: v.union(v.literal("pending"), v.literal("paid"), v.literal("failed")),
     paymentMethod: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
+  // Sesi AI Agent: menyimpan berkas proyek multi-file & log eksekusi agent
+  agentSessions: defineTable({
+    userId: v.id("users"),
+    projectId: v.optional(v.id("projects")),
+    title: v.string(),
+    goal: v.string(),
+    status: v.union(
+      v.literal("idle"),
+      v.literal("thinking"),
+      v.literal("ready"),
+      v.literal("error"),
+    ),
+    files: v.array(
+      v.object({
+        path: v.string(),
+        content: v.string(),
+        language: v.optional(v.string()),
+      }),
+    ),
+    logs: v.array(
+      v.object({
+        timestamp: v.number(),
+        type: v.union(
+          v.literal("system"),
+          v.literal("thought"),
+          v.literal("tool"),
+          v.literal("output"),
+          v.literal("error"),
+        ),
+        message: v.string(),
+      }),
+    ),
+    lastOutput: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
 });
 
 export default schema;
