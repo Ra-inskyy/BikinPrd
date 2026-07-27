@@ -214,32 +214,44 @@ function summarizeHttpError(status: number, body: string): string {
  * fence-nya dilepas dulu.
  */
 function safeParseJson(raw: string): unknown {
+  if (!raw) return undefined;
   let text = raw.trim();
 
-  // Strip <think>...</think> jika ada (model seperti DeepSeek-R1 / thinking models)
+  // 1. Strip <think>...</think> jika ada (model DeepSeek / Thinking)
   if (text.includes("<think>")) {
     text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
   }
 
-  // Extract dari markdown fence ```json ... ``` jika ada
+  // 2. Extract dari markdown fence ```json ... ``` jika ada
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (fenceMatch && fenceMatch[1]) {
     text = fenceMatch[1].trim();
   }
 
+  // 3. Coba JSON.parse langsung
   try {
     return JSON.parse(text);
   } catch {
-    // Coba ambil objek JSON pertama di dalam teks sebagai fallback.
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start !== -1 && end > start) {
-      try {
-        return JSON.parse(text.slice(start, end + 1));
-      } catch {
-        return undefined;
+    // 4. Sanitasi trailing commas & unescaped control characters
+    const sanitized = text
+      .replace(/,\s*([\]}])/g, "$1") // hapus trailing commas [a, b,] atau {a: 1,}
+      .replace(/[\r\n]+/g, " "); // ganti newline tak ter-escape dengan spasi jika perlu
+
+    try {
+      return JSON.parse(sanitized);
+    } catch {
+      // 5. Fallback: ambil objek JSON { ... } paling luar
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}");
+      if (start !== -1 && end > start) {
+        const candidate = text.slice(start, end + 1).replace(/,\s*([\]}])/g, "$1");
+        try {
+          return JSON.parse(candidate);
+        } catch {
+          return undefined;
+        }
       }
+      return undefined;
     }
-    return undefined;
   }
 }
