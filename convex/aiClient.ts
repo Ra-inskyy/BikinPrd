@@ -82,8 +82,10 @@ async function aiStructuredOutput(
 
   const CANDIDATE_MODELS = [
     AI_MODEL,
-    AI_MODEL === "prd" ? "combomax" : "prd",
-  ].filter((m, i, self) => self.indexOf(m) === i);
+    "gemini",
+    "prd",
+    "combomax",
+  ].filter((m, i, self) => Boolean(m) && self.indexOf(m) === i);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const currentModel = CANDIDATE_MODELS[(attempt - 1) % CANDIDATE_MODELS.length];
