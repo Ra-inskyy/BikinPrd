@@ -232,6 +232,61 @@ function summarizeHttpError(status: number, body: string): string {
   return `HTTP ${status}${snippet}`;
 }
 
+function repairTruncatedJson(jsonStr: string): string {
+  let str = jsonStr.trim();
+  const fenceMatch = str.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
+  if (fenceMatch && fenceMatch[1]) {
+    str = fenceMatch[1].trim();
+  }
+
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === "\\" && !escaped) {
+      escaped = true;
+    } else {
+      if (char === '"' && !escaped) inString = !inString;
+      escaped = false;
+    }
+  }
+
+  if (inString) str += '"';
+  str = str.replace(/,\s*$/, "").replace(/,\s*([\]}])/g, "$1");
+
+  const stack: string[] = [];
+  inString = false;
+  escaped = false;
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (char === "\\" && !escaped) {
+      escaped = true;
+    } else {
+      if (char === '"' && !escaped) {
+        inString = !inString;
+      } else if (!inString) {
+        if (char === "{" || char === "[") {
+          stack.push(char);
+        } else if (char === "}" && stack[stack.length - 1] === "{") {
+          stack.pop();
+        } else if (char === "]" && stack[stack.length - 1] === "[") {
+          stack.pop();
+        }
+      }
+      escaped = false;
+    }
+  }
+
+  while (stack.length > 0) {
+    const opening = stack.pop();
+    if (opening === "{") str += "}";
+    else if (opening === "[") str += "]";
+  }
+
+  return str;
+}
+
 /**
  * Parse JSON dengan aman. Kalau model sempat membungkus dengan ```json ... ```,
  * fence-nya dilepas dulu.
@@ -275,7 +330,13 @@ function safeParseJson(raw: string): unknown {
     try {
       return JSON.parse(cleaned);
     } catch {
-      return undefined;
+      // 6. Auto-repair jika JSON terpotong di tengah jalan (truncated output)
+      try {
+        const repaired = repairTruncatedJson(text);
+        return JSON.parse(repaired);
+      } catch {
+        return undefined;
+      }
     }
   }
 }

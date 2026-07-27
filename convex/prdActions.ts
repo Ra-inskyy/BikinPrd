@@ -465,7 +465,7 @@ ${baseContext}`;
           prompt: overviewPrompt,
           output_schema: PRD_OVERVIEW_SCHEMA,
           intelligence_level: "smart",
-          max_tokens: 2000,
+          max_tokens: 4000,
         },
       );
       let overview = overviewRes.result || {};
