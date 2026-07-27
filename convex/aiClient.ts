@@ -80,7 +80,13 @@ async function aiStructuredOutput(
   const PER_ATTEMPT_TIMEOUT_MS = 110_000;
   let lastError = "Gagal memanggil AI";
 
+  const CANDIDATE_MODELS = [
+    AI_MODEL,
+    AI_MODEL === "prd" ? "combomax" : "prd",
+  ].filter((m, i, self) => self.indexOf(m) === i);
+
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const currentModel = CANDIDATE_MODELS[(attempt - 1) % CANDIDATE_MODELS.length];
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), PER_ATTEMPT_TIMEOUT_MS);
     try {
@@ -91,7 +97,7 @@ async function aiStructuredOutput(
           Authorization: `Bearer ${AI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: AI_MODEL,
+          model: currentModel,
           messages: [
             { role: "system", content: systemMsg },
             { role: "user", content: userMsg },
@@ -153,13 +159,28 @@ async function aiStructuredOutput(
       }
 
       // Parse konten JSON dari model.
-      const parsed = safeParseJson(content);
+      let parsed = safeParseJson(content);
       if (parsed === undefined) {
         return {
           result: null,
           error: "Gagal mem-parsing JSON dari respons AI",
         };
       }
+
+      // Jika model membungkus hasil di { document: {...} }, { prd: {...} }, { data: {...} }, dll.
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const obj = parsed as Record<string, unknown>;
+        if (obj.document && typeof obj.document === "object") {
+          parsed = obj.document;
+        } else if (obj.prd && typeof obj.prd === "object") {
+          parsed = obj.prd;
+        } else if (obj.data && typeof obj.data === "object") {
+          parsed = obj.data;
+        } else if (obj.result && typeof obj.result === "object") {
+          parsed = obj.result;
+        }
+      }
+
       return { result: parsed, error: null };
     } catch (e: unknown) {
       const aborted = e instanceof Error && e.name === "AbortError";
